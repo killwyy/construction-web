@@ -1,23 +1,30 @@
 import { useState } from 'react';
-import Navbar from './Navbar'; // นำเข้า Navbar ที่เราแยกไฟล์ไว้
+import Navbar from './Navbar'; 
 import HomeContent from './HomeContent';
-import ServiceContent from './ServiceContent';
+import ServiceContent from './ServiceContent'; // สำหรับแบบบ้านมาตรฐาน
 import ContactContent from './ContactContent';
+
+// สร้าง Component เล็กๆ ไว้ชั่วคราวเพื่อกัน Error จนกว่าคุณจะสร้างไฟล์แยก
+const AboutContent = () => <div className="py-20 text-center text-2xl">หน้าเกี่ยวกับเรา (กำลังพัฒนา)</div>;
+const ServiceRepair = () => <div className="py-20 text-center text-2xl">ระบบซ่อมบ้าน (กำลังพัฒนา)</div>;
+const ServiceEval = () => <div className="py-20 text-center text-2xl">จ้างประเมินบ้าน (กำลังพัฒนา)</div>;
 
 function App() {
   const [view, setView] = useState('home');
 
   return (
     <div className="min-h-screen bg-white">
-      {/* เรียกใช้ Navbar และส่งค่า view/setView ไปให้ทำงาน */}
       <Navbar view={view} setView={setView} />
 
-      {/* ส่วนเนื้อหาหลัก */}
       <main>
-        {/* 2. เพิ่มเงื่อนไขให้แสดง ContactContent เมื่อ view === 'contact' */}
         {view === 'home' && <HomeContent />}
-        {view === 'service' && <ServiceContent />}
         {view === 'contact' && <ContactContent />}
+        {view === 'about' && <AboutContent />}
+        
+        {/* แบ่งหน้าตามบริการ 3 แบบ */}
+        {view === 'service-models' && <ServiceContent />}
+        {view === 'service-repair' && <ServiceRepair />}
+        {view === 'service-eval' && <ServiceEval />}
       </main>
     </div>
   );
