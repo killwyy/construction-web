@@ -2,7 +2,7 @@ export default function HomeContent() {
   return (
     <div className="relative h-[600px] bg-[#001D4A] flex items-center justify-end pr-20 text-white overflow-hidden">
       <img 
-        src="https://images.unsplash.com/photo-1600585154340-be6161a56a0c?q=80&w=2070" 
+        src="/images/home1.jfif"
         alt="Luxury House" 
         className="absolute inset-0 w-full h-full object-cover opacity-50"
       />

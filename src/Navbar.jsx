@@ -15,9 +15,9 @@ export default function Navbar({ view, setView }) {
           หน้าแรก
         </button>
 
-        {/* Dropdown การบริการ */}
+        {/* ปรับเพิ่มส่วน padding ตรง wrapper (py-2) เพื่อให้เมาส์เลื่อนจากปุ่มลงมาหากล่องได้สมูท เมนูไม่หุบหาย */}
         <div 
-          className="relative group"
+          className="relative py-2"
           onMouseEnter={() => setIsDropdownOpen(true)}
           onMouseLeave={() => setIsDropdownOpen(false)}
         >
@@ -26,14 +26,18 @@ export default function Navbar({ view, setView }) {
           </button>
           
           {isDropdownOpen && (
-            <div className="absolute top-full left-0 w-64 bg-white shadow-xl rounded-lg py-2 mt-1 z-50 border border-gray-100">
-              <button onClick={() => setView('service-models')} className="w-full text-left px-4 py-3 hover:bg-gray-50 text-sm font-bold border-b border-gray-50">แบบบ้านมาตรฐาน</button>
-              <button onClick={() => setView('service-repair')} className="w-full text-left px-4 py-3 hover:bg-gray-50 text-sm font-bold border-b border-gray-50">ระบบซ่อมบ้าน</button>
-              <button onClick={() => setView('service-eval')} className="w-full text-left px-4 py-3 hover:bg-gray-50 text-sm font-bold">จ้างประเมินบ้าน</button>
+            <div className="absolute top-[90%] left-0 w-64 bg-white shadow-xl rounded-lg py-2 z-50 border border-gray-100">
+              <button onClick={() => { setView('service-models'); setIsDropdownOpen(false); }} className="w-full text-left px-4 py-3 hover:bg-gray-50 text-sm font-bold border-b border-gray-50">แบบบ้านมาตรฐาน</button>
+              <button onClick={() => { setView('service-repair'); setIsDropdownOpen(false); }} className="w-full text-left px-4 py-3 hover:bg-gray-50 text-sm font-bold border-b border-gray-50">ระบบซ่อมบ้าน</button>
+              
+              {/* 📍 เพิ่มเมนู ระบบติดตั้ง/ต่อเติมบ้าน ตรงนี้ครับ */}
+              <button onClick={() => { setView('service-install'); setIsDropdownOpen(false); }} className="w-full text-left px-4 py-3 hover:bg-gray-50 text-sm font-bold border-b border-gray-50">ระบบติดตั้ง/ต่อเติมบ้าน</button>
+              
+              <button onClick={() => { setView('service-eval'); setIsDropdownOpen(false); }} className="w-full text-left px-4 py-3 hover:bg-gray-50 text-sm font-bold">จ้างประเมินบ้าน</button>
             </div>
           )}
         </div>
-
+         <button onClick={() => setView('process')} className={`pb-1 border-b-2 transition-colors ${view === 'process' ? 'border-[#001D4A] text-[#001D4A]' : 'border-transparent text-gray-600 hover:text-[#001D4A]'}`}>ขั้นตอนการสร้างบ้าน </button>
         <button onClick={() => setView('about')} className={`pb-1 border-b-2 ${view === 'about' ? 'border-[#001D4A] text-[#001D4A]' : 'border-transparent'}`}>
           เกี่ยวกับเรา
         </button>
