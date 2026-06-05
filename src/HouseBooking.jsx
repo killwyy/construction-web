@@ -2,9 +2,10 @@ import { useState, useEffect } from 'react';
 import { supabase } from './supabase'; 
 import { Check, X, UploadCloud, CheckCircle2, Loader2 } from 'lucide-react'; 
 
+// 📍 อัปเดต InputField ให้รองรับขอบแดงตอนเกิด Error
 const InputField = ({ label, name, type = "text", value, onChange, maxLength, error }) => (
   <div className="mb-6">
-    <label className="text-base font-medium text-gray-600 block mb-2">{label}</label>
+    <label className={`text-base font-medium block mb-2 ${error ? 'text-red-500' : 'text-gray-600'}`}>{label}</label>
     <input 
       type={type} 
       name={name}
@@ -14,7 +15,7 @@ const InputField = ({ label, name, type = "text", value, onChange, maxLength, er
       className={`w-full border-b-2 py-2.5 text-lg outline-none transition-colors bg-transparent text-gray-900 
         ${error ? 'border-red-500 focus:border-red-600' : 'border-gray-300 focus:border-[#001D4A]'}`}
     />
-    {error && <p className="text-red-500 text-sm mt-1.5">{error}</p>}
+    {error && <p className="text-red-500 text-sm mt-1.5 font-medium">{error}</p>}
   </div>
 );
 
@@ -48,7 +49,7 @@ export default function HouseBooking({ houseId, setView }) {
     termsAccepted: false
   });
 
-  const [errors, setErrors] = useState({ phone: '', idCard: '' });
+  const [formErrors, setFormErrors] = useState({});
 
   useEffect(() => {
     async function fetchHouseDetail() {
@@ -70,8 +71,18 @@ export default function HouseBooking({ houseId, setView }) {
   if (!house) return <div className="min-h-screen flex items-center justify-center text-xl text-red-500">ไม่พบข้อมูลบ้าน</div>;
 
   const currentPrice = selectedSpec === 'standard' ? house.price : house.price_premium;
-  const nextStep = () => { window.scrollTo(0, 0); setCurrentStep(prev => prev + 1); };
-  const prevStep = () => { window.scrollTo(0, 0); setCurrentStep(prev => prev - 1); };
+  
+  const nextStep = () => { 
+    setFormErrors({}); 
+    window.scrollTo(0, 0); 
+    setCurrentStep(prev => prev + 1); 
+  };
+  
+  const prevStep = () => { 
+    setFormErrors({});
+    window.scrollTo(0, 0); 
+    setCurrentStep(prev => prev - 1); 
+  };
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -83,48 +94,60 @@ export default function HouseBooking({ houseId, setView }) {
 
     setFormData(prev => ({ ...prev, [name]: inputValue }));
 
-    let newErrors = { ...errors };
-    if (name === 'phone') {
-      newErrors.phone = (inputValue.length > 0 && inputValue.length < 10) ? '* เบอร์โทรศัพท์ต้องมี 10 หลัก' : '';
+    if (formErrors[name]) {
+      setFormErrors(prev => ({ ...prev, [name]: null }));
     }
-    if (name === 'idCard') {
-      newErrors.idCard = (inputValue.length > 0 && inputValue.length < 13) ? '* เลขบัตรประชาชนต้องมี 13 หลัก' : '';
-    }
-    setErrors(newErrors);
   };
 
-  // 📍 อัปเดตเงื่อนไข: บังคับเช็คทุกช่องที่มี * ว่าห้ามเป็นค่าว่าง
-  const isStep2Valid = 
-    formData.firstName.trim() !== '' && 
-    formData.lastName.trim() !== '' && 
-    formData.phone.length === 10 && 
-    formData.birthDate !== '' && 
-    formData.buildReason !== '' && 
-    formData.idCard.length === 13 && 
-    formData.currHouseNo.trim() !== '' && 
-    formData.currProvince !== '' && 
-    formData.currDistrict.trim() !== '' && 
-    formData.currSubDistrict.trim() !== '' && 
-    formData.buildProvince !== '' && 
-    formData.buildDistrict.trim() !== '' && 
-    formData.buildSubDistrict.trim() !== '' && 
-    formData.expectedBuildDate !== '' && 
-    formData.termsAccepted;
+  const validateStep2AndNext = () => {
+    const errors = {};
+    if (!formData.firstName.trim()) errors.firstName = 'กรุณากรอกชื่อ';
+    if (!formData.lastName.trim()) errors.lastName = 'กรุณากรอกนามสกุล';
+    if (formData.phone.length !== 10) errors.phone = 'กรุณากรอกเบอร์โทรศัพท์ให้ครบ 10 หลัก';
+    if (!formData.birthDate) errors.birthDate = 'กรุณาเลือกวันเกิด';
+    if (!formData.buildReason) errors.buildReason = 'กรุณาเลือกเหตุผลในการสร้างบ้าน';
+    if (formData.idCard.length !== 13) errors.idCard = 'กรุณากรอกเลขบัตรประชาชนให้ครบ 13 หลัก';
+    
+    if (!formData.currHouseNo.trim()) errors.currHouseNo = 'กรุณากรอกบ้านเลขที่';
+    if (!formData.currProvince) errors.currProvince = 'กรุณาเลือกจังหวัด';
+    if (!formData.currDistrict.trim()) errors.currDistrict = 'กรุณากรอกอำเภอ/เขต';
+    if (!formData.currSubDistrict.trim()) errors.currSubDistrict = 'กรุณากรอกตำบล/แขวง';
+    
+    if (!formData.buildProvince) errors.buildProvince = 'กรุณาเลือกจังหวัด';
+    if (!formData.buildDistrict.trim()) errors.buildDistrict = 'กรุณากรอกอำเภอ/เขต';
+    if (!formData.buildSubDistrict.trim()) errors.buildSubDistrict = 'กรุณากรอกตำบล/แขวง';
+    if (!formData.expectedBuildDate) errors.expectedBuildDate = 'กรุณาเลือกวันที่คาดว่าจะสร้างบ้าน';
+    
+    if (!formData.termsAccepted) errors.termsAccepted = '* กรุณายอมรับข้อตกลงและเงื่อนไขการจองสร้างบ้าน';
+
+    if (Object.keys(errors).length > 0) {
+      setFormErrors(errors);
+      return;
+    }
+
+    nextStep();
+  };
 
   const handleSlipUpload = (e) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
       setSlipFile(file);
       setSlipPreviewUrl(URL.createObjectURL(file));
+      if (formErrors.slip) setFormErrors(prev => ({ ...prev, slip: null }));
     }
   };
 
   const submitBooking = async () => {
-    if (!slipFile) return;
+    if (!slipFile) {
+      setFormErrors({ slip: 'กรุณาแนบสลิปการโอนเงินเพื่อยืนยันการจอง' });
+      return;
+    }
+
     setIsSubmitting(true);
     try {
       const fileExt = slipFile.name.split('.').pop();
-      const fileName = `${Date.now()}_${Math.random().toString(36).substring(2)}.${fileExt}`; 
+      // 📍 ใส่โฟลเดอร์ bookings/
+      const fileName = `bookings/slip_${Date.now()}_${Math.random().toString(36).substring(2)}.${fileExt}`; 
       
       const { data: uploadData, error: uploadError } = await supabase.storage.from('payment_slips').upload(fileName, slipFile);
       if (uploadError) throw uploadError;
@@ -150,7 +173,7 @@ export default function HouseBooking({ houseId, setView }) {
     }
   };
 
-  const SummaryCard = ({ buttonText, onNext, onPrev, disableNext }) => (
+  const SummaryCard = ({ buttonText, onNext, onPrev }) => (
     <div className="lg:col-span-4 sticky top-10 flex justify-end z-10">
       <div className="bg-white p-7 rounded-[24px] shadow-[0_10px_40px_rgba(0,0,0,0.08)] border border-gray-100 w-full max-w-[340px]">
         <h3 className="text-[#001D4A] font-bold text-lg mb-1">Spec {selectedSpec === 'standard' ? 'Standard' : 'Premium'} {house.title}</h3>
@@ -161,8 +184,9 @@ export default function HouseBooking({ houseId, setView }) {
         <p onClick={() => setShowModal(true)} className="text-gray-500 text-xs underline hover:text-[#E60000] cursor-pointer transition-colors mb-6">*เงื่อนไขการคืนเงินจองได้ค่าราคาจองบ้าน</p>
         <hr className="border-gray-200 mb-6" />
         <div className="flex flex-col gap-3">
-          <button onClick={disableNext ? null : onNext} disabled={disableNext || isSubmitting}
-            className={`w-full py-3.5 font-bold rounded-full transition-all text-base flex justify-center items-center gap-2 ${disableNext || isSubmitting ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-black text-white hover:bg-gray-800 shadow-md'}`}>
+          <button onClick={onNext} disabled={isSubmitting}
+            className={`w-full py-3.5 font-bold rounded-full transition-all text-base flex justify-center items-center gap-2 
+              ${isSubmitting ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-black text-white hover:bg-gray-800 shadow-md'}`}>
             {isSubmitting ? <><Loader2 size={18} className="animate-spin" /> กำลังประมวลผล...</> : buttonText}
           </button>
           <button onClick={onPrev} disabled={isSubmitting} className="w-full py-3.5 bg-white border border-gray-200 text-[#001D4A] font-bold rounded-full hover:bg-gray-50 transition-colors text-base disabled:opacity-50">
@@ -242,39 +266,46 @@ export default function HouseBooking({ houseId, setView }) {
             
             <h2 className="text-2xl font-bold text-[#001D4A] mb-8 pb-4 border-b">ข้อมูลส่วนตัว</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-10 gap-y-2">
-              <InputField label="ชื่อ*" name="firstName" value={formData.firstName} onChange={handleChange} />
-              <InputField label="นามสกุล*" name="lastName" value={formData.lastName} onChange={handleChange} />
-              <InputField label="เบอร์โทร*" name="phone" value={formData.phone} onChange={handleChange} maxLength="10" error={errors.phone} />
-              <InputField label="วันเกิด*" name="birthDate" type="date" value={formData.birthDate} onChange={handleChange} />
+              <InputField label="ชื่อ*" name="firstName" value={formData.firstName} onChange={handleChange} error={formErrors.firstName} />
+              <InputField label="นามสกุล*" name="lastName" value={formData.lastName} onChange={handleChange} error={formErrors.lastName} />
+              <InputField label="เบอร์โทร*" name="phone" value={formData.phone} onChange={handleChange} maxLength="10" error={formErrors.phone} />
+              <InputField label="วันเกิด*" name="birthDate" type="date" value={formData.birthDate} onChange={handleChange} error={formErrors.birthDate} />
               
               <div className="mb-6">
-                <label className="text-base font-medium text-gray-600 block mb-2">เหตุผลในการสร้างบ้าน*</label>
-                <select name="buildReason" value={formData.buildReason} onChange={handleChange} className="w-full border-b-2 border-gray-300 py-2.5 text-lg outline-none focus:border-[#001D4A] transition-colors bg-transparent text-gray-900 cursor-pointer">
+                <label className={`text-base font-medium block mb-2 ${formErrors.buildReason ? 'text-red-500' : 'text-gray-600'}`}>เหตุผลในการสร้างบ้าน*</label>
+                <select name="buildReason" value={formData.buildReason} onChange={handleChange} 
+                  className={`w-full border-b-2 py-2.5 text-lg outline-none transition-colors bg-transparent text-gray-900 cursor-pointer 
+                    ${formErrors.buildReason ? 'border-red-500 focus:border-red-600' : 'border-gray-300 focus:border-[#001D4A]'}`}>
                   <option value="" disabled>เลือกเหตุผล</option>
                   <option value="สร้างบ้านหลังแรก">สร้างบ้านหลังแรก</option>
                   <option value="ขยับขยายครอบครัว">ขยับขยายครอบครัว</option>
                   <option value="สร้างให้พ่อแม่">สร้างให้พ่อแม่</option>
                   <option value="เพื่อการลงทุน">เพื่อการลงทุน</option>
                 </select>
+                {formErrors.buildReason && <p className="text-red-500 text-sm mt-1.5 font-medium">{formErrors.buildReason}</p>}
               </div>
-              <InputField label="บัตรประชาชน/เลขประจำตัวผู้เสียภาษี*" name="idCard" value={formData.idCard} onChange={handleChange} maxLength="13" error={errors.idCard} />
+
+              <InputField label="บัตรประชาชน/เลขประจำตัวผู้เสียภาษี*" name="idCard" value={formData.idCard} onChange={handleChange} maxLength="13" error={formErrors.idCard} />
             </div>
 
             <h2 className="text-2xl font-bold text-[#001D4A] mt-8 mb-8 pb-4 border-b">ที่อยู่ปัจจุบัน</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-10 gap-y-2">
-              <InputField label="บ้านเลขที่*" name="currHouseNo" value={formData.currHouseNo} onChange={handleChange} />
+              <InputField label="บ้านเลขที่*" name="currHouseNo" value={formData.currHouseNo} onChange={handleChange} error={formErrors.currHouseNo} />
               <InputField label="ซอย, ถนน" name="currSoiRoad" value={formData.currSoiRoad} onChange={handleChange} />
               
               <div className="mb-6">
-                <label className="text-base font-medium text-gray-600 block mb-2">จังหวัด*</label>
-                <select name="currProvince" value={formData.currProvince} onChange={handleChange} className="w-full border-b-2 border-gray-300 py-2.5 text-lg outline-none focus:border-[#001D4A] transition-colors bg-transparent text-gray-900 cursor-pointer">
+                <label className={`text-base font-medium block mb-2 ${formErrors.currProvince ? 'text-red-500' : 'text-gray-600'}`}>จังหวัด*</label>
+                <select name="currProvince" value={formData.currProvince} onChange={handleChange} 
+                  className={`w-full border-b-2 py-2.5 text-lg outline-none transition-colors bg-transparent text-gray-900 cursor-pointer
+                    ${formErrors.currProvince ? 'border-red-500 focus:border-red-600' : 'border-gray-300 focus:border-[#001D4A]'}`}>
                   <option value="" disabled>เลือกจังหวัด</option>
                   {PROVINCES.map(prov => <option key={`curr-${prov}`} value={prov}>{prov}</option>)}
                 </select>
+                {formErrors.currProvince && <p className="text-red-500 text-sm mt-1.5 font-medium">{formErrors.currProvince}</p>}
               </div>
               
-              <InputField label="อำเภอ, เขต*" name="currDistrict" value={formData.currDistrict} onChange={handleChange} />
-              <InputField label="ตำบล, แขวง*" name="currSubDistrict" value={formData.currSubDistrict} onChange={handleChange} />
+              <InputField label="อำเภอ, เขต*" name="currDistrict" value={formData.currDistrict} onChange={handleChange} error={formErrors.currDistrict} />
+              <InputField label="ตำบล, แขวง*" name="currSubDistrict" value={formData.currSubDistrict} onChange={handleChange} error={formErrors.currSubDistrict} />
             </div>
 
             <h2 className="text-2xl font-bold text-[#001D4A] mt-8 mb-8 pb-4 border-b">สถานที่ก่อสร้าง</h2>
@@ -283,27 +314,33 @@ export default function HouseBooking({ houseId, setView }) {
               <InputField label="ถนน" name="buildRoad" value={formData.buildRoad} onChange={handleChange} />
               
               <div className="mb-6">
-                <label className="text-base font-medium text-gray-600 block mb-2">จังหวัด*</label>
-                <select name="buildProvince" value={formData.buildProvince} onChange={handleChange} className="w-full border-b-2 border-gray-300 py-2.5 text-lg outline-none focus:border-[#001D4A] transition-colors bg-transparent text-gray-900 cursor-pointer">
+                <label className={`text-base font-medium block mb-2 ${formErrors.buildProvince ? 'text-red-500' : 'text-gray-600'}`}>จังหวัด*</label>
+                <select name="buildProvince" value={formData.buildProvince} onChange={handleChange} 
+                  className={`w-full border-b-2 py-2.5 text-lg outline-none transition-colors bg-transparent text-gray-900 cursor-pointer
+                    ${formErrors.buildProvince ? 'border-red-500 focus:border-red-600' : 'border-gray-300 focus:border-[#001D4A]'}`}>
                   <option value="" disabled>เลือกจังหวัด</option>
                   {PROVINCES.map(prov => <option key={`build-${prov}`} value={prov}>{prov}</option>)}
                 </select>
+                {formErrors.buildProvince && <p className="text-red-500 text-sm mt-1.5 font-medium">{formErrors.buildProvince}</p>}
               </div>
 
-              <InputField label="อำเภอ, เขต*" name="buildDistrict" value={formData.buildDistrict} onChange={handleChange} />
-              <InputField label="ตำบล, แขวง*" name="buildSubDistrict" value={formData.buildSubDistrict} onChange={handleChange} />
-              <InputField label="วันที่คาดว่าจะสร้างบ้าน*" name="expectedBuildDate" type="date" value={formData.expectedBuildDate} onChange={handleChange} />
+              <InputField label="อำเภอ, เขต*" name="buildDistrict" value={formData.buildDistrict} onChange={handleChange} error={formErrors.buildDistrict} />
+              <InputField label="ตำบล, แขวง*" name="buildSubDistrict" value={formData.buildSubDistrict} onChange={handleChange} error={formErrors.buildSubDistrict} />
+              <InputField label="วันที่คาดว่าจะสร้างบ้าน*" name="expectedBuildDate" type="date" value={formData.expectedBuildDate} onChange={handleChange} error={formErrors.expectedBuildDate} />
             </div>
 
-            <div className="mt-8 pt-8 border-t flex items-center gap-3">
-              <input type="checkbox" id="terms" name="termsAccepted" checked={formData.termsAccepted} onChange={handleChange} className="w-6 h-6 accent-red-600 cursor-pointer" />
-              <label htmlFor="terms" className="text-base text-gray-800 cursor-pointer select-none">
-                ยอมรับ<span onClick={(e) => { e.preventDefault(); setShowModal(true); }} className="underline font-bold ml-1.5 hover:text-red-600 transition-colors">ข้อตกลงและเงื่อนไขการจองสร้างบ้านออนไลน์</span>
-              </label>
+            <div className="mt-8 pt-8 border-t flex flex-col gap-2">
+              <div className="flex items-center gap-3">
+                <input type="checkbox" id="terms" name="termsAccepted" checked={formData.termsAccepted} onChange={handleChange} className="w-6 h-6 accent-red-600 cursor-pointer" />
+                <label htmlFor="terms" className={`text-base cursor-pointer select-none ${formErrors.termsAccepted ? 'text-red-500 font-bold' : 'text-gray-800'}`}>
+                  ยอมรับ<span onClick={(e) => { e.preventDefault(); setShowModal(true); }} className="underline font-bold ml-1.5 hover:text-red-600 transition-colors text-[#001D4A]">ข้อตกลงและเงื่อนไขการจองสร้างบ้านออนไลน์</span>
+                </label>
+              </div>
+              {formErrors.termsAccepted && <p className="text-red-500 text-sm font-medium">{formErrors.termsAccepted}</p>}
             </div>
           </div>
           
-          <SummaryCard buttonText="ถัดไป" onNext={nextStep} onPrev={prevStep} disableNext={!isStep2Valid} />
+          <SummaryCard buttonText="ถัดไป" onNext={validateStep2AndNext} onPrev={prevStep} />
         </div>
       )}
 
@@ -314,20 +351,23 @@ export default function HouseBooking({ houseId, setView }) {
               <h2 className="text-2xl font-bold text-[#001D4A] mb-2">สแกน QR Code เพื่อชำระเงินจอง</h2>
               <p className="text-gray-500 mb-8 text-base">กรุณาสแกน QR Code ด้านล่างผ่านแอปพลิเคชันธนาคารของคุณ (รองรับทุกธนาคาร)</p>
               <div className="border border-gray-200 p-2 rounded-xl bg-gray-50 max-w-[340px] w-full shadow-sm mb-6">
-                {/* 📍 อัปเดต Path รูปภาพตามที่คุณแจ้งมา */}
                 <img src="/images/QR.jpg" alt="Thai QR Payment" className="w-full h-auto rounded-lg object-contain" />
               </div>
             </div>
+            
             <div className="bg-white p-10 rounded-3xl shadow-sm border border-gray-100">
-              <h2 className="text-xl font-bold text-[#001D4A] mb-2 border-b pb-4">แนบหลักฐานการโอนเงิน (สลิป)*</h2>
-              {!slipFile && <p className="text-red-500 text-base font-semibold mb-4">* กรุณาอัปโหลดสลิปเพื่อทำการยืนยันการจอง</p>}
-              <label className="flex flex-col items-center justify-center w-full h-64 border-2 border-gray-300 border-dashed rounded-2xl cursor-pointer bg-gray-50 hover:bg-gray-100 transition-colors relative overflow-hidden">
+              <h2 className={`text-xl font-bold mb-2 border-b pb-4 ${formErrors.slip ? 'text-red-500 border-red-100' : 'text-[#001D4A] border-gray-100'}`}>แนบหลักฐานการโอนเงิน (สลิป)*</h2>
+              {!slipFile && !formErrors.slip && <p className="text-gray-500 text-base font-semibold mb-4 mt-4">* กรุณาอัปโหลดสลิปเพื่อทำการยืนยันการจอง</p>}
+              {formErrors.slip && <p className="text-red-500 text-base font-bold mb-4 mt-4">{formErrors.slip}</p>}
+              
+              <label className={`flex flex-col items-center justify-center w-full h-64 border-2 border-dashed rounded-2xl cursor-pointer transition-colors relative overflow-hidden
+                ${formErrors.slip ? 'border-red-500 bg-red-50' : 'border-gray-300 bg-gray-50 hover:bg-gray-100'}`}>
                 {slipPreviewUrl ? (
                   <img src={slipPreviewUrl} alt="Slip Preview" className="absolute inset-0 w-full h-full object-contain p-2" />
                 ) : (
                   <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                    <UploadCloud className="w-12 h-12 text-gray-400 mb-3" />
-                    <p className="mb-2 text-base text-gray-500"><span className="font-semibold text-[#001D4A]">คลิกเพื่ออัปโหลด</span> หรือลากไฟล์มาวางที่นี่</p>
+                    <UploadCloud className={`w-12 h-12 mb-3 ${formErrors.slip ? 'text-red-400' : 'text-gray-400'}`} />
+                    <p className="mb-2 text-base text-gray-500"><span className={`font-semibold ${formErrors.slip ? 'text-red-500' : 'text-[#001D4A]'}`}>คลิกเพื่ออัปโหลด</span> หรือลากไฟล์มาวางที่นี่</p>
                     <p className="text-sm text-gray-400">PNG, JPG หรือ JPEG (สูงสุด 5MB)</p>
                   </div>
                 )}
@@ -340,7 +380,7 @@ export default function HouseBooking({ houseId, setView }) {
               )}
             </div>
           </div>
-          <SummaryCard buttonText="ยืนยันการจอง" onNext={submitBooking} onPrev={prevStep} disableNext={!slipFile} />
+          <SummaryCard buttonText="ยืนยันการจอง" onNext={submitBooking} onPrev={prevStep} />
         </div>
       )}
 

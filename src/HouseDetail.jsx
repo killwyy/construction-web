@@ -76,7 +76,7 @@ export default function HouseDetail({ houseId, setView }) {
         
         <button 
           onClick={() => {
-            window.scrollTo(0, 0); // เลื่อนจอขึ้นบนสุด
+            window.scrollTo(0, 0); 
             setView('service-models');
           }}
           className="flex items-center gap-2 text-gray-400 hover:text-[#001D4A] font-bold transition-colors mb-10"
@@ -186,16 +186,19 @@ export default function HouseDetail({ houseId, setView }) {
             <p className="text-3xl font-bold text-red-600">฿50,000</p>
           </div>
           <div className="flex gap-4 w-full sm:w-auto">
+            
+            {/* 📍 ปรับแก้ปุ่มและ Action ตรงนี้ครับ */}
             <button onClick={() => {
               window.scrollTo(0, 0); 
-              setView('contact');
-            }} className="px-8 py-4 bg-gray-100 text-[#001D4A] font-bold rounded-full hover:bg-gray-200 transition-colors">ปรึกษาผู้เชี่ยวชาญ</button>
+              setView('process');
+            }} className="px-8 py-4 bg-gray-100 text-[#001D4A] font-bold rounded-full hover:bg-gray-200 transition-colors">
+              ขั้นตอนการสร้างบ้าน
+            </button>
             
-            {/* ปุ่มนี้คือพระเอกของเราครับ เพิ่ม scrollTo ให้แล้ว */}
             <button 
               onClick={() => {
-                window.scrollTo(0, 0); // เลื่อนจอขึ้นบนสุดก่อน
-                setView('booking');    // แล้วค่อยสั่งสลับหน้า
+                window.scrollTo(0, 0); 
+                setView('booking');    
               }} 
               className="px-10 py-4 bg-[#001D4A] text-white font-bold rounded-full hover:bg-blue-800 hover:shadow-lg hover:-translate-y-1 transition-all flex items-center gap-2"
             >

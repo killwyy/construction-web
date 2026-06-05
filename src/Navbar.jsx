@@ -1,8 +1,17 @@
 import { useState } from 'react';
-import { Search, User, ChevronDown } from 'lucide-react';
+import { Search, User, ChevronDown, LogOut } from 'lucide-react'; // 📍 เพิ่ม LogOut icon
+import { supabase } from './supabase'; // 📍 นำเข้าเพื่อใช้ฟังก์ชัน Logout
 
-export default function Navbar({ view, setView }) {
+export default function Navbar({ view, setView, user }) { // 📍 รับ user prop
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false); // 📍 State สำหรับ Dropdown ของ User
+
+  // 📍 ฟังก์ชันสำหรับออกจากระบบ
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    setIsUserMenuOpen(false);
+    setView('home');
+  };
 
   return (
     <nav className="flex items-center justify-between px-20 py-7 bg-white sticky top-0 z-50 shadow-sm">
@@ -15,7 +24,6 @@ export default function Navbar({ view, setView }) {
           หน้าแรก
         </button>
 
-        {/* ปรับเพิ่มส่วน padding ตรง wrapper (py-2) เพื่อให้เมาส์เลื่อนจากปุ่มลงมาหากล่องได้สมูท เมนูไม่หุบหาย */}
         <div 
           className="relative py-2"
           onMouseEnter={() => setIsDropdownOpen(true)}
@@ -29,10 +37,7 @@ export default function Navbar({ view, setView }) {
             <div className="absolute top-[90%] left-0 w-64 bg-white shadow-xl rounded-lg py-2 z-50 border border-gray-100">
               <button onClick={() => { setView('service-models'); setIsDropdownOpen(false); }} className="w-full text-left px-4 py-3 hover:bg-gray-50 text-sm font-bold border-b border-gray-50">แบบบ้านมาตรฐาน</button>
               <button onClick={() => { setView('service-repair'); setIsDropdownOpen(false); }} className="w-full text-left px-4 py-3 hover:bg-gray-50 text-sm font-bold border-b border-gray-50">ระบบซ่อมบ้าน</button>
-              
-              {/* 📍 เพิ่มเมนู ระบบติดตั้ง/ต่อเติมบ้าน ตรงนี้ครับ */}
               <button onClick={() => { setView('service-install'); setIsDropdownOpen(false); }} className="w-full text-left px-4 py-3 hover:bg-gray-50 text-sm font-bold border-b border-gray-50">ระบบติดตั้ง/ต่อเติมบ้าน</button>
-              
               <button onClick={() => { setView('service-eval'); setIsDropdownOpen(false); }} className="w-full text-left px-4 py-3 hover:bg-gray-50 text-sm font-bold">จ้างประเมินบ้าน</button>
             </div>
           )}
@@ -48,7 +53,49 @@ export default function Navbar({ view, setView }) {
 
       <div className="flex items-center space-x-7 text-[#001D4A]">
         <Search className="w-[22px] h-[22px] cursor-pointer" />
-        <User className="w-[24px] h-[24px] cursor-pointer" />
+        
+        {/* 📍 เช็คว่ามี User ล็อกอินอยู่หรือไม่ */}
+        {user ? (
+          <div 
+            className="relative py-2"
+            onMouseEnter={() => setIsUserMenuOpen(true)}
+            onMouseLeave={() => setIsUserMenuOpen(false)}
+          >
+            {/* ปุ่มแสดง Avatar */}
+            <div className="flex items-center gap-2 cursor-pointer bg-gray-50 hover:bg-gray-100 pl-2 pr-3 py-1.5 rounded-full transition-colors border border-gray-200">
+              <div className="w-7 h-7 bg-[#001D4A] text-white rounded-full flex items-center justify-center font-bold text-xs uppercase">
+                {/* ดึงอักษรตัวแรกของชื่อหรืออีเมลมาแสดงเป็น Avatar */}
+                {user.user_metadata?.full_name?.charAt(0) || user.email?.charAt(0) || 'U'}
+              </div>
+              <span className="text-sm font-bold text-[#001D4A] max-w-[120px] truncate">
+                {user.user_metadata?.full_name || user.email?.split('@')[0]}
+              </span>
+              <ChevronDown size={14} className="text-gray-500" />
+            </div>
+
+            {/* User Dropdown Menu */}
+            {isUserMenuOpen && (
+              <div className="absolute top-[90%] right-0 w-56 bg-white shadow-xl rounded-lg py-2 z-50 border border-gray-100">
+                <div className="px-4 py-3 border-b border-gray-50">
+                  <p className="text-xs text-gray-400 font-semibold uppercase tracking-wider mb-1">ล็อกอินด้วยบัญชี</p>
+                  <p className="text-sm font-bold text-gray-700 truncate">{user.email}</p>
+                </div>
+                <button 
+                  onClick={handleLogout}
+                  className="w-full text-left px-4 py-3 hover:bg-red-50 text-red-600 text-sm font-bold flex items-center gap-2 transition-colors mt-1"
+                >
+                  <LogOut size={16} /> ออกจากระบบ
+                </button>
+              </div>
+            )}
+          </div>
+        ) : (
+          /* 📍 ถ้าไม่มี User ให้แสดงไอคอนรูปคนเหมือนเดิมเพื่อไปหน้า Login */
+          <User 
+            onClick={() => setView('login')} 
+            className="w-[24px] h-[24px] cursor-pointer hover:scale-110 transition-transform" 
+          />
+        )}
       </div>
     </nav>
   );
