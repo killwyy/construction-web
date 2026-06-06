@@ -1,0 +1,222 @@
+Created At: 2026-06-06T03:07:31Z
+Completed At: 2026-06-06T03:07:54Z
+The following changes were made by the multi_replace_file_content tool to: d:\construction-web\src\AdminDashboard.jsx. If relevant, proactively run terminal commands to execute this code for the USER. Don't ask for permission.
+[diff_block_start]
+@@ -15,135 +15,159 @@
+   Plus,
+   Edit,
+   Trash2,
+-  CreditCard,
+-  UploadCloud,
+-  Loader2,
+-  AlertTriangle,
+-  MapPin,
+-  Image as ImageIcon,
+-  MessageSquare,
+-  DollarSign,
+-  Eye 
+-} from 'lucide-react';
+-import { supabase } from './supabase';
+-
+-export default function AdminDashboard({ setView }) {
+-  const [activeTab, setActiveTab] = useState('overview');
+-  const [subTab, setSubTab] = useState('bookings'); 
+-  const [repairSubTab, setRepairSubTab] = useState('requests'); 
+-  
+-  // Real Data States
+-  const [bookings, setBookings] = useState([]); 
+-  const [houseModels, setHouseModels] = useState([]);
+-  
+-  // 📍 แยกระบบซ่อมเป็น 2 ตาราง
+-  const [repairRequests, setRepairRequests] = useState([]); 
+-  const [repairBookings, setRepairBookings] = useState([]); 
+-
+-  // Profile email lookup
+-  const [profileMap, setProfileMap] = useState({});
+-
+-  const [isLoading, setIsLoading] = useState(false);
+-  const [isSaving, setIsSaving] = useState(false); 
+-  
+-  // Modal Control States
+-  const [selectedBooking, setSelectedBooking] = useState(null); 
+-  const [isModelModalOpen, setIsModelModalOpen] = useState(false);
+-  const [editingModel, setEditingModel] = useState(null);
+-
+-  // States สำหรับ ระบบซ่อมบ้าน
+-  const [selectedRepair, setSelectedRepair] = useState(null);
+-  const [repairForm, setRepairForm] = useState({ status: 'pending', admin_price: '', admin_reply: '' });
+-
+-  // States สำหรับ Custom Alert / Confirm
+-  const [feedbackModal, setFeedbackModal] = useState(null); 
+-  const [confirmModal, setConfirmModal] = useState(null); 
+-
+-  const [imageFile, setImage
+<truncated 36417 bytes>
+Tab === 'overview' && 'แดชบอร์ดภาพรวมคิวงาน'}
++              {activeTab === 'models' && 'การจัดการแบบบ้านและการจองสร้างบ้าน'}
++              {activeTab === 'repairs' && 'ระบบรับแจ้งซ่อมแซมและบำรุงรักษา'}
++            </h2>
++            <p className="text-sm text-gray-400 font-light tracking-wide mt-1">ยินดีต้อนรับกลับมา, ผู้ดูแลระบบสูงสุด</p>
++          </div>
++          <button 
++            onClick={handleRefresh} 
++            disabled={isLoading}
++            className="flex items-center gap-2 bg-[#001D4A] text-white px-5 py-2.5 rounded-full font-semibold hover:bg-blue-900 transition-colors shadow-sm disabled:opacity-70 disabled:cursor-not-allowed"
++          >
++            <RefreshCw size={18} className={isLoading ? "animate-spin" : ""} />
++            รีเฟรชข้อมูล
++          </button>
++        </header>
++
++        {activeTab === 'overview' && (
++          <div className="space-y-8">
++            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
++              {stats.map((item, idx) => (
+                 <div key={idx} className="bg-white p-7 rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-gray-100/50 flex items-center justify-between hover:-translate-y-1.5 hover:shadow-[0_15px_40px_rgb(0,0,0,0.08)] transition-all duration-300 group">
+                   <div>
+                     <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">{item.title}</p>
+[diff_block_end]
+
+Please note that the above snippet only shows the MODIFIED lines from the last change. It shows up to 3 lines of unchanged lines before and after the modified lines. The actual file contents may have many more lines not shown.
+
+We did our best to apply changes despite some inaccuracies. Double check if the edit applied is what you intended.
+Created At: 2026-06-06T03:09:27Z
+Completed At: 2026-06-06T03:09:28Z
+The following changes were made by the replace_file_content tool to: d:\construction-web\src\AdminDashboard.jsx. If relevant, proactively run terminal commands to execute this code for the USER. Don't ask for permission.
+[diff_block_start]
+@@ -15,23 +15,7 @@
+   Plus,
+   Edit,
+   Trash2,
+-import React, { useState, useEffect } from 'react';
+-import { 
+-  LayoutDashboard, 
+-  Home, 
+-  Wrench, 
+-  Hammer, 
+-  ClipboardCheck, 
+-  LogOut, 
+-  Clock, 
+-  CheckCircle2, 
+-  AlertCircle,
+-  X,
+-  User,
+-  FileText,
+-  Plus,
+-  Edit,
+-  Trash2,
++
+   CreditCard,
+   UploadCloud,
+   Loader2,
+[diff_block_end]
+
+Please note that the above snippet only shows the MODIFIED lines from the last change. It shows up to 3 lines of unchanged lines before and after the modified lines. The actual file contents may have many more lines not shown.
+Created At: 2026-06-06T03:15:52Z
+Completed At: 2026-06-06T03:15:55Z
+The following changes were made by the replace_file_content tool to: d:\construction-web\src\AdminDashboard.jsx. If relevant, proactively run terminal commands to execute this code for the USER. Don't ask for permission.
+[diff_block_start]
+@@ -325,6 +325,7 @@
+   const StatusBadge = ({ status }) => {
+     if (status === 'approved' || status === 'evaluated') return <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-xs font-semibold tracking-wide flex items-center gap-1 w-fit"><CheckCircle2 size={12}/> {status === 'evaluated' ? 'ประเมินแล้ว' : 'ตรวจสอบแล้ว'}</span>;
+     if (status === 'rejected') return <span className="bg-red-100 text-red-700 px-3 py-1 rounded-full text-xs font-semibold tracking-wide flex items-center gap-1 w-fit"><X size={12}/> ไม่ผ่าน/ยกเลิก</span>;
++    if (status === 'user_cancelled') return <span className="bg-gray-100 text-gray-500 px-3 py-1 rounded-full text-xs font-semibold tracking-wide flex items-center gap-1 w-fit"><X size={12}/> ผู้ใช้ยกเลิกการจอง</span>;
+     if (status === 'booked') return <span className="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-xs font-semibold tracking-wide flex items-center gap-1 w-fit"><CheckCircle2 size={12}/> จองคิวแล้ว</span>;
+     return <span className="bg-amber-100 text-amber-700 px-3 py-1 rounded-full text-xs font-semibold tracking-wide flex items-center gap-1 w-fit"><AlertCircle size={12}/> รอดำเนินการ</span>;
+   };
+[diff_block_end]
+
+Please note that the above snippet only shows the MODIFIED lines from the last change. It shows up to 3 lines of unchanged lines before and after the modified lines. The actual file contents may have many more lines not shown.
+Created At: 2026-06-06T03:18:09Z
+Completed At: 2026-06-06T03:18:31Z
+The following changes were made by the replace_file_content tool to: d:\construction-web\src\AdminDashboard.jsx. If relevant, proactively run terminal commands to execute this code for the USER. Don't ask for permission.
+[diff_block_start]
+@@ -610,24 +610,48 @@
+                         <th className="py-4">ประเภทงานซ่อม</th>
+                         <th className="py-4">ชื่อลูกค้า</th>
+                         <th className="py-4">สถานะอนุมัติ</th>
+-                        <th className="py-4 pr-6 text-right rounded-r-xl">การจัดการ</th>
+-                      </tr>
+-                    </thead>
+-                    <tbody className="text-base font-light text-gray-600 divide-y divide-gray-50">
+-                      {isLoading ? (
+-                        <tr><td colSpan="5" className="py-8 text-center text-gray-400">กำลังโหลดข้อมูล...</td></tr>
+-                      ) : repairBookings.length === 0 ? (
+-                        <tr><td colSpan="5" className="py-8 text-center text-gray-400">ยังไม่มีประวัติการจองคิวและแนบสลิปเข้ามา</td></tr>
+-                      ) : (
+-                        repairBookings.map((booking) => (
++                        <td className="py-5 pl-6 border-b border-gray-50 group-hover:border-transparent text-gray-500">{new Date(repair.created_at).toLocaleDateString('th-TH')}</td>
++                            <td className="py-5 border-b border-gray-50 group-hover:border-transparent font-semibold text-[#001D4A]">{repair.category}</td>
++                            <td className="py-5 border-b border-gray-50 group-hover:border-transparent max-w-[200px] truncate text-gray-500">{repair.description}</td>
++                            <td className="py-5 border-b border-gray-50 group-hover:border-transparent font-bold text
+<truncated 2396 bytes>
+                 <tr><td colSpan="5" className="py-8 text-center text-gray-400">ยังไม่มีประวัติการจองคิวและแนบสลิปเข้ามา</td></tr>
++                      ) : (
++                        repairBookings.map((booking) => (
+                           <tr key={booking.id} className="hover:bg-gray-50/80 transition-all duration-200 group">
+-                        <td className="py-5 pl-6 border-b border-gray-50 group-hover:border-transparent font-normal text-gray-500">{booking.repair_date ? new Date(booking.repair_date).toLocaleDateString('th-TH') : '---'}</td>
+-                            <td className="py-5 border-b border-gray-50 group-hover:border-transparent font-semibold text-[#001D4A]">{booking.repair_requests?.category}</td>
+-                            <td className="py-5 border-b border-gray-50 group-hover:border-transparent font-normal text-gray-700">{booking.customer_name}</td>
+-                            <td className="py-5 border-b border-gray-50 group-hover:border-transparent"><StatusBadge status={booking.status} /></td>
+-                            <td className="py-5 border-b border-gray-50 group-hover:border-transparent text-right pr-6">
+-                              <button onClick={() => handleOpenRepairModal(booking, 'booking')} className="text-xs bg-green-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-green-700 transition-colors shadow-sm">
+-                                ตรวจสอบสลิปและคิวช่าง
+                               </button>
+                             </td>
+                           </tr>
+[diff_block_end]
+
+Please note that the above snippet only shows the MODIFIED lines from the last change. It shows up to 3 lines of unchanged lines before and after the modified lines. The actual file contents may have many more lines not shown.
+
+We did our best to apply changes despite some inaccuracies. Double check if the edit applied is what you intended.
+Created At: 2026-06-06T03:21:02Z
+Completed At: 2026-06-06T03:21:04Z
+The following changes were made by the replace_file_content tool to: d:\construction-web\src\AdminDashboard.jsx. If relevant, proactively run terminal commands to execute this code for the USER. Don't ask for permission.
+[diff_block_start]
+@@ -605,6 +605,7 @@
+                       className={`w-full text-sm font-semibold rounded-lg px-3 py-2 border outline-none cursor-pointer transition-colors
+                         ${selectedBooking.status === 'approved' ? 'bg-green-50 border-green-200 text-green-700' : 
+                           selectedBooking.status === 'rejected' ? 'bg-red-50 border-red-200 text-red-700' : 
++                          selectedBooking.status === 'user_cancelled' ? 'bg-gray-50 border-gray-200 text-gray-500' : 
+                           'bg-amber-50 border-amber-200 text-amber-700'}`}
+                     >
+                       <option value="pending">รอดำเนินการ</option>
+@@ -611,4 +611,5 @@
+                       <option value="rejected">ไม่ผ่าน / ยกเลิก</option>
++                      <option value="user_cancelled">ผู้ใช้ยกเลิกการจอง</option>
+                     </select>
+                   </div>
+                 </div>
+[diff_block_end]
+
+Please note that the above snippet only shows the MODIFIED lines from the last change. It shows up to 3 lines of unchanged lines before and after the modified lines. The actual file contents may have many more lines not shown.
+Created At: 2026-06-06T03:21:27Z
+Completed At: 2026-06-06T03:21:29Z
+The following changes were made by the replace_file_content tool to: d:\construction-web\src\AdminDashboard.jsx. If relevant, proactively run terminal commands to execute this code for the USER. Don't ask for permission.
+[diff_block_start]
+@@ -836,6 +836,7 @@
+                       className={`w-full text-sm font-bold rounded-xl px-4 py-3.5 border outline-none cursor-pointer transition-colors shadow-sm
+                         ${repairForm.status === 'approved' ? 'bg-green-100 border-green-300 text-green-800' : 
+                           repairForm.status === 'rejected' ? 'bg-red-100 border-red-300 text-red-800' : 
++                          repairForm.status === 'user_cancelled' ? 'bg-gray-100 border-gray-300 text-gray-600' : 
+                           'bg-amber-100 border-amber-300 text-amber-800'}`}
+                     >
+                       {selectedRepair.type === 'booking' ? (
+@@ -842,6 +842,7 @@
+                           <option value="pending_payment">รอตรวจสอบสลิปมัดจำ</option>
+                           <option value="approved">ตรวจสอบสลิปถูกต้อง / อนุมัติคิวช่าง</option>
+                           <option value="rejected">สลิปไม่ถูกต้อง / ยกเลิกคิวงาน</option>
++                          <option value="user_cancelled">ผู้ใช้ยกเลิกเอง</option>
+                         </>
+                       ) : (
+                         <>
+@@ -848,5 +848,6 @@
+                           <option value="evaluated">ประเมินและส่งราคาให้ลูกค้าแล้ว</option>
+                           <option value="rejected">ไม่สามารถรับงานได้ / ยกเลิก</option>
++                          <option value="user_cancelled">ผู้ใช้ยกเลิกเอง</option>
+                         </>
+                       )}
+                     </select>
+[diff_block_end]
+
+Please note that the above snippet only shows the MODIFIED lines from the last change. It shows up to 3 lines of unchanged lines before and after the modified lines. The actual file contents may have many more lines not shown.

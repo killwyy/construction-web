@@ -263,7 +263,7 @@ export default function ServiceContent({ onViewDetail, setView }) {
             <p className="text-gray-500 text-sm leading-relaxed mb-6">คุณต้องเข้าสู่ระบบก่อนเพื่อดูรายละเอียดและใช้งานระบบต่างๆของเรา</p>
             <button
               onClick={() => { setAlertModal(false); setView('login'); }}
-              className="w-full py-3.5 rounded-full font-bold text-base text-white bg-[#001D4A] hover:bg-blue-900 transition-all shadow-md"
+              className="w-full py-3.5 rounded-full font-bold text-base text-white bg-[#001D4A] hover:bg-blue-900 transition-colors shadow-md"
             >
               ไปหน้าเข้าสู่ระบบ
             </button>

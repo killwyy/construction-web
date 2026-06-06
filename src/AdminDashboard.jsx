@@ -23,9 +23,60 @@ import {
   Image as ImageIcon,
   MessageSquare,
   DollarSign,
-  Eye 
+  Eye,
+  RefreshCw
 } from 'lucide-react';
 import { supabase } from './supabase';
+
+const parseBuildAddress = (address) => {
+  if (!address) return {};
+  if (typeof address === 'object') return address;
+  try {
+    return JSON.parse(address);
+  } catch {
+    return {};
+  }
+};
+
+const formatExpectedBuildDate = (dateStr) => {
+  if (!dateStr) return '---';
+  try {
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return dateStr;
+    return d.toLocaleDateString('th-TH', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+  } catch {
+    return dateStr;
+  }
+};
+
+const formatAdminPrice = (price) => {
+  if (!price) return '---';
+  const cleanPrice = price.toString().trim();
+  const rawNum = cleanPrice.replace(/,/g, '');
+  const num = Number(rawNum);
+  if (!isNaN(num) && rawNum !== '') {
+    return `฿${num.toLocaleString()}`;
+  }
+  return cleanPrice.startsWith('฿') ? cleanPrice : `฿${cleanPrice}`;
+};
+
+const extractPriceRange = (item) => {
+  if (!item) return { price: '', reply: '' };
+  const reply = item.admin_reply || '';
+  const priceCol = item.admin_price;
+  
+  const match = reply.match(/\|\|__PRICE_RANGE:(.*?)__\|\|/);
+  if (match) {
+    const rangePrice = match[1];
+    const cleanReply = reply.replace(/\|\|__PRICE_RANGE:.*?__\|\|/, '');
+    return { price: rangePrice, reply: cleanReply };
+  }
+  return { price: priceCol ? priceCol.toString() : '', reply: reply };
+};
 
 export default function AdminDashboard({ setView }) {
   const [activeTab, setActiveTab] = useState('overview');
@@ -39,6 +90,9 @@ export default function AdminDashboard({ setView }) {
   // 📍 แยกระบบซ่อมเป็น 2 ตาราง
   const [repairRequests, setRepairRequests] = useState([]); 
   const [repairBookings, setRepairBookings] = useState([]); 
+
+  // Profile email lookup
+  const [profileMap, setProfileMap] = useState({});
 
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false); 
@@ -99,17 +153,56 @@ export default function AdminDashboard({ setView }) {
       const { data: bookData, error: bookErr } = await supabase.from('repair_bookings').select('*, repair_requests(*)').order('created_at', { ascending: false });
       if (bookErr) throw bookErr;
 
-      setRepairRequests(reqData || []);
-      setRepairBookings(bookData || []);
+      const parsedReqData = (reqData || []).map(r => {
+        const { price, reply } = extractPriceRange(r);
+        return { ...r, admin_price: price, admin_reply: reply };
+      });
+
+      const parsedBookData = (bookData || []).map(b => {
+        if (b.repair_requests) {
+          const { price, reply } = extractPriceRange(b.repair_requests);
+          return {
+            ...b,
+            repair_requests: { ...b.repair_requests, admin_price: price, admin_reply: reply }
+          };
+        }
+        return b;
+      });
+
+      setRepairRequests(parsedReqData);
+      setRepairBookings(parsedBookData);
     } catch (error) {
       console.error('Error fetching repairs:', error.message);
     }
   };
 
+  const fetchProfiles = async () => {
+    try {
+      const { data, error } = await supabase.from('profiles').select('id, email');
+      if (error) throw error;
+      if (data) {
+        const pMap = {};
+        data.forEach(p => pMap[p.id] = p.email);
+        setProfileMap(pMap);
+      }
+    } catch (error) {
+      console.error('Error fetching profiles:', error.message);
+    }
+  };
+
   useEffect(() => {
     setIsLoading(true);
-    Promise.all([fetchBookings(), fetchHouseModels(), fetchRepairs()]).finally(() => setIsLoading(false));
+    Promise.all([fetchBookings(), fetchHouseModels(), fetchRepairs(), fetchProfiles()]).finally(() => setIsLoading(false));
   }, []);
+
+  const handleRefresh = async () => {
+    setIsLoading(true);
+    try {
+      await Promise.all([fetchBookings(), fetchHouseModels(), fetchRepairs(), fetchProfiles()]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleUpdateBookingStatus = async (id, newStatus) => {
     try {
@@ -135,10 +228,16 @@ export default function AdminDashboard({ setView }) {
     setIsSaving(true);
     try {
       if (selectedRepair.type === 'request') {
+        const rawPrice = repairForm.admin_price || '';
+        const numericMatch = rawPrice.replace(/,/g, '').match(/\d+/);
+        const numericPrice = numericMatch ? parseFloat(numericMatch[0]) : null;
+
+        const enrichedReply = rawPrice ? `${repairForm.admin_reply}||__PRICE_RANGE:${rawPrice}__||` : repairForm.admin_reply;
+
         const { error } = await supabase.from('repair_requests').update({
           status: repairForm.status,
-          admin_price: repairForm.admin_price,
-          admin_reply: repairForm.admin_reply
+          admin_price: numericPrice,
+          admin_reply: enrichedReply
         }).eq('id', selectedRepair.id);
         if (error) throw error;
       } else {
@@ -265,6 +364,49 @@ export default function AdminDashboard({ setView }) {
     });
   };
 
+  const handleDeleteBooking = (id, customerName) => {
+    setConfirmModal({
+      title: 'ยืนยันการลบการจอง',
+      message: `คุณแน่ใจหรือไม่ว่าต้องการลบการจองของ "${customerName}"? ข้อมูลที่ถูกลบจะไม่สามารถกู้คืนได้`,
+      onConfirm: async () => {
+        try {
+          setIsSaving(true);
+          const { error } = await supabase.from('bookings').delete().eq('id', id);
+          if (error) throw error;
+          fetchBookings();
+          setFeedbackModal({ type: 'success', title: 'ลบข้อมูลสำเร็จ', message: 'ลบรายการจองเรียบร้อยแล้ว' });
+        } catch (error) {
+          setFeedbackModal({ type: 'error', title: 'ลบข้อมูลไม่สำเร็จ', message: error.message });
+        } finally {
+          setIsSaving(false);
+          setConfirmModal(null);
+        }
+      }
+    });
+  };
+
+  const handleDeleteRepair = (id, type) => {
+    setConfirmModal({
+      title: 'ยืนยันการลบรายการ',
+      message: 'คุณแน่ใจหรือไม่ว่าต้องการลบรายการนี้? ข้อมูลที่ถูกลบจะไม่สามารถกู้คืนได้',
+      onConfirm: async () => {
+        try {
+          setIsSaving(true);
+          const table = type === 'request' ? 'repair_requests' : 'repair_bookings';
+          const { error } = await supabase.from(table).delete().eq('id', id);
+          if (error) throw error;
+          fetchRepairs();
+          setFeedbackModal({ type: 'success', title: 'ลบข้อมูลสำเร็จ', message: 'ลบรายการซ่อมเรียบร้อยแล้ว' });
+        } catch (error) {
+          setFeedbackModal({ type: 'error', title: 'ลบข้อมูลไม่สำเร็จ', message: error.message });
+        } finally {
+          setIsSaving(false);
+          setConfirmModal(null);
+        }
+      }
+    });
+  };
+
   const StatusBadge = ({ status }) => {
     if (status === 'approved' || status === 'evaluated') return <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-xs font-semibold tracking-wide flex items-center gap-1 w-fit"><CheckCircle2 size={12}/> {status === 'evaluated' ? 'ประเมินแล้ว' : 'ตรวจสอบแล้ว'}</span>;
     if (status === 'rejected') return <span className="bg-red-100 text-red-700 px-3 py-1 rounded-full text-xs font-semibold tracking-wide flex items-center gap-1 w-fit"><X size={12}/> ไม่ผ่าน/ยกเลิก</span>;
@@ -335,6 +477,14 @@ export default function AdminDashboard({ setView }) {
             </h2>
             <p className="text-sm text-gray-400 font-light tracking-wide mt-1">ยินดีต้อนรับกลับมา, ผู้ดูแลระบบสูงสุด</p>
           </div>
+          <button 
+            onClick={handleRefresh} 
+            disabled={isLoading}
+            className="flex items-center gap-2 bg-[#001D4A] text-white px-5 py-2.5 rounded-full font-semibold hover:bg-blue-900 transition-colors shadow-sm disabled:opacity-70 disabled:cursor-not-allowed"
+          >
+            <RefreshCw size={18} className={isLoading ? "animate-spin" : ""} />
+            รีเฟรชข้อมูล
+          </button>
         </header>
 
         {activeTab === 'overview' && (
@@ -404,6 +554,8 @@ export default function AdminDashboard({ setView }) {
                         <th className="pb-3 pl-2">วันที่ยื่นเรื่อง</th>
                         <th className="pb-3">รหัสแบบบ้าน</th>
                         <th className="pb-3">ชื่อลูกค้า</th>
+                        <th className="pb-3">อีเมล</th>
+                        <th className="pb-3">ราคาการจอง</th>
                         <th className="pb-3">สถานะตรวจสอบ</th>
                         <th className="pb-3 text-right pr-2">การจัดการ</th>
                       </tr>
@@ -413,10 +565,21 @@ export default function AdminDashboard({ setView }) {
                         <tr key={booking.id} className="hover:bg-gray-50/50 transition-colors">
                           <td className="py-4 pl-2 font-normal text-gray-500">{booking.created_at ? new Date(booking.created_at).toLocaleDateString('th-TH') : '---'}</td>
                           <td className="py-4 font-semibold text-[#001D4A] tracking-wide">{booking.house_title}</td>
-                          <td className="py-4 font-normal text-gray-700">{booking.customer_firstname} {booking.customer_lastname}</td>
+                          <td className="py-4 font-normal text-gray-700">
+                            {booking.customer_firstname} {booking.customer_lastname}
+                          </td>
+                          <td className="py-4 font-normal text-blue-600">
+                            {profileMap[booking.user_id] || '---'}
+                          </td>
+                          <td className="py-4 font-semibold text-red-600">
+                            ฿50,000
+                          </td>
                           <td className="py-4"><StatusBadge status={booking.status} /></td>
                           <td className="py-4 text-right pr-2">
-                            <button onClick={() => setSelectedBooking(booking)} className="text-xs bg-[#001D4A] text-white px-3 py-2 rounded-lg font-semibold hover:bg-blue-900 transition-colors shadow-sm">ตรวจสอบ / อนุมัติ</button>
+                            <div className="flex items-center justify-end gap-2">
+                              <button onClick={() => setSelectedBooking(booking)} className="text-xs bg-[#001D4A] text-white px-4 py-1.5 rounded-full font-bold hover:bg-blue-900 transition-colors shadow-sm">ตรวจสอบ / อนุมัติ</button>
+                              <button onClick={() => handleDeleteBooking(booking.id, `${booking.customer_firstname} ${booking.customer_lastname}`)} className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors"><Trash2 size={16} /></button>
+                            </div>
                           </td>
                         </tr>
                       ))}
@@ -493,6 +656,7 @@ export default function AdminDashboard({ setView }) {
                       <tr className="border-b border-gray-100 text-gray-400 text-xs font-semibold uppercase tracking-widest">
                         <th className="pb-3 pl-2">วันที่แจ้งเรื่อง</th>
                         <th className="pb-3">ประเภทงานซ่อม</th>
+                        <th className="pb-3">อีเมล</th>
                         <th className="pb-3">อาการความเสียหาย</th>
                         <th className="pb-3">ราคาประเมิน</th>
                         <th className="pb-3 text-right pr-2">การจัดการ</th>
@@ -500,22 +664,26 @@ export default function AdminDashboard({ setView }) {
                     </thead>
                     <tbody className="text-base font-light text-gray-600 divide-y divide-gray-50">
                       {isLoading ? (
-                        <tr><td colSpan="5" className="py-8 text-center text-gray-400">กำลังโหลดข้อมูล...</td></tr>
+                        <tr><td colSpan="6" className="py-8 text-center text-gray-400">กำลังโหลดข้อมูล...</td></tr>
                       ) : pendingRequests.length === 0 ? (
-                        <tr><td colSpan="5" className="py-8 text-center text-gray-400">ไม่มีคำขอที่รอการประเมินราคาในระบบ</td></tr>
+                        <tr><td colSpan="6" className="py-8 text-center text-gray-400">ไม่มีคำขอที่รอการประเมินราคาในระบบ</td></tr>
                       ) : (
                         pendingRequests.map((repair) => (
                           <tr key={repair.id} className="hover:bg-gray-50/50 transition-colors">
                             <td className="py-4 pl-2 text-gray-500">{new Date(repair.created_at).toLocaleDateString('th-TH')}</td>
                             <td className="py-4 font-semibold text-[#001D4A]">{repair.category}</td>
+                            <td className="py-4 font-normal text-blue-600">{repair.user_email || '---'}</td>
                             <td className="py-4 max-w-[200px] truncate text-gray-500">{repair.description}</td>
                             <td className="py-4 font-bold text-blue-600">
-                               {repair.admin_price ? `฿${Number(repair.admin_price).toLocaleString()}` : <StatusBadge status={repair.status}/>}
+                               {repair.admin_price ? formatAdminPrice(repair.admin_price) : <StatusBadge status={repair.status}/>}
                             </td>
                             <td className="py-4 text-right pr-2">
-                              <button onClick={() => handleOpenRepairModal(repair, 'request')} className="text-xs bg-[#001D4A] text-white px-4 py-2 rounded-lg font-semibold hover:bg-blue-900 transition-colors shadow-sm">
-                                ประเมิน / ตอบกลับ
-                              </button>
+                              <div className="flex items-center justify-end gap-2">
+                                <button onClick={() => handleOpenRepairModal(repair, 'request')} className="text-xs bg-[#001D4A] text-white px-4 py-1.5 rounded-full font-bold hover:bg-blue-900 transition-colors shadow-sm">
+                                  ประเมิน / ตอบกลับ
+                                </button>
+                                <button onClick={() => handleDeleteRepair(repair.id, 'request')} className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors"><Trash2 size={16} /></button>
+                              </div>
                             </td>
                           </tr>
                         ))
@@ -536,26 +704,33 @@ export default function AdminDashboard({ setView }) {
                         <th className="pb-3 pl-2">วันที่ต้องการให้เข้าซ่อม</th>
                         <th className="pb-3">ประเภทงานซ่อม</th>
                         <th className="pb-3">ชื่อลูกค้า</th>
+                        <th className="pb-3">อีเมล</th>
                         <th className="pb-3">สถานะอนุมัติ</th>
                         <th className="pb-3 text-right pr-2">การจัดการ</th>
                       </tr>
                     </thead>
                     <tbody className="text-base font-light text-gray-600 divide-y divide-gray-50">
                       {isLoading ? (
-                        <tr><td colSpan="5" className="py-8 text-center text-gray-400">กำลังโหลดข้อมูล...</td></tr>
+                        <tr><td colSpan="6" className="py-8 text-center text-gray-400">กำลังโหลดข้อมูล...</td></tr>
                       ) : repairBookings.length === 0 ? (
-                        <tr><td colSpan="5" className="py-8 text-center text-gray-400">ยังไม่มีประวัติการจองคิวและแนบสลิปเข้ามา</td></tr>
+                        <tr><td colSpan="6" className="py-8 text-center text-gray-400">ยังไม่มีประวัติการจองคิวและแนบสลิปเข้ามา</td></tr>
                       ) : (
                         repairBookings.map((booking) => (
                           <tr key={booking.id} className="hover:bg-gray-50/50 transition-colors">
                             <td className="py-4 pl-2 font-normal text-gray-500">{booking.repair_date ? new Date(booking.repair_date).toLocaleDateString('th-TH') : '---'}</td>
                             <td className="py-4 font-semibold text-[#001D4A]">{booking.repair_requests?.category}</td>
                             <td className="py-4 font-normal text-gray-700">{booking.customer_name}</td>
+                            <td className="py-4 font-normal text-blue-600">
+                              {booking.repair_requests?.user_email || '---'}
+                            </td>
                             <td className="py-4"><StatusBadge status={booking.status} /></td>
                             <td className="py-4 text-right pr-2">
-                              <button onClick={() => handleOpenRepairModal(booking, 'booking')} className="text-xs bg-green-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-green-700 transition-colors shadow-sm">
-                                ตรวจสอบสลิปและคิวช่าง
-                              </button>
+                              <div className="flex items-center justify-end gap-2">
+                                <button onClick={() => handleOpenRepairModal(booking, 'booking')} className="text-xs bg-[#001D4A] text-white px-4 py-1.5 rounded-full font-bold hover:bg-blue-900 transition-colors shadow-sm">
+                                  ตรวจสอบสลิปและคิวช่าง
+                                </button>
+                                <button onClick={() => handleDeleteRepair(booking.id, 'booking')} className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors"><Trash2 size={16} /></button>
+                              </div>
                             </td>
                           </tr>
                         ))
@@ -605,11 +780,13 @@ export default function AdminDashboard({ setView }) {
                       className={`w-full text-sm font-semibold rounded-lg px-3 py-2 border outline-none cursor-pointer transition-colors
                         ${selectedBooking.status === 'approved' ? 'bg-green-50 border-green-200 text-green-700' : 
                           selectedBooking.status === 'rejected' ? 'bg-red-50 border-red-200 text-red-700' : 
-                          'bg-amber-50 border-amber-200 text-amber-700'}`}
+                          selectedBooking.status === 'user_cancelled' ? 'bg-gray-50 border-gray-200 text-gray-500' : 
+                          'bg-white border-gray-200 text-gray-700'}`}
                     >
                       <option value="pending">รอดำเนินการ</option>
                       <option value="approved">ตรวจสอบแล้ว (อนุมัติ)</option>
                       <option value="rejected">ไม่ผ่าน / ยกเลิก</option>
+                      <option value="user_cancelled" disabled={selectedBooking.status !== 'user_cancelled'}>ผู้ใช้ยกเลิกการจอง</option>
                     </select>
                   </div>
                 </div>
@@ -624,10 +801,30 @@ export default function AdminDashboard({ setView }) {
                 </div>
               </div>
 
+              {(() => {
+                const buildAddr = parseBuildAddress(selectedBooking.build_address);
+                return (
+                  <div className="space-y-3 border-b border-gray-100 pb-4">
+                    <h4 className="text-sm font-semibold text-[#001D4A] flex items-center gap-2">
+                      <MapPin size={16} className="text-blue-600" /> สถานที่ก่อสร้าง
+                    </h4>
+                    <div className="grid grid-cols-2 gap-2 pl-6 text-gray-800">
+                      <p>ซอย: {buildAddr.soi || '---'}</p>
+                      <p>ถนน: {buildAddr.road || '---'}</p>
+                      <p>ตำบล/แขวง: {buildAddr.subDistrict || '---'}</p>
+                      <p>อำเภอ/เขต: {buildAddr.district || '---'}</p>
+                      <p className="col-span-2">จังหวัด: {buildAddr.province || '---'}</p>
+                      <p className="col-span-2">วันที่คาดว่าจะสร้างบ้าน: {formatExpectedBuildDate(selectedBooking.expected_build_date)}</p>
+                    </div>
+                  </div>
+                );
+              })()}
+
               <div className="space-y-3 pb-2">
                 <h4 className="text-sm font-semibold text-[#001D4A] flex items-center gap-2"><FileText size={16} /> ข้อมูลบ้านที่จะสร้าง</h4>
                 <p className="pl-6 text-gray-800">รหัสแบบบ้าน: <span className="font-bold text-[#001D4A]">{selectedBooking.house_title}</span> ({selectedBooking.spec_selected})</p>
-                <p className="pl-6 text-gray-800">ราคา: ฿{Number(selectedBooking.price).toLocaleString()}</p>
+                <p className="pl-6 text-gray-800">ราคาก่อสร้างแบบบ้าน: ฿{Number(selectedBooking.price).toLocaleString()}</p>
+                <p className="pl-6 text-[#E60000] font-bold">ราคาจองสร้างบ้าน: ฿50,000</p>
                 <p className="pl-6 text-gray-800">เหตุผลที่ปลูกสร้าง: {selectedBooking.build_reason}</p>
               </div>
             </div>
@@ -726,26 +923,22 @@ export default function AdminDashboard({ setView }) {
                 )}
 
                 {/* 2. ข้อมูลติดต่อหน้างาน */}
-                <div className="bg-gradient-to-br from-blue-50 to-white p-5 rounded-2xl border border-blue-100 shadow-sm">
-                  <h4 className="text-sm font-bold text-[#001D4A] flex items-center gap-2 mb-4 pb-2 border-b border-blue-200/50">
-                    <User size={18} className="text-blue-600" /> ข้อมูลติดต่อหน้างาน
-                  </h4>
-                  <div className="space-y-2.5">
-                    {selectedRepair.type === 'booking' ? (
-                      <>
-                        <p className="text-gray-700 flex items-center gap-2"><span className="text-blue-400 font-medium w-24">ชื่อผู้แจ้ง:</span> <span className="font-semibold text-[#001D4A]">{selectedRepair.customer_name}</span></p>
-                        <p className="text-gray-700 flex items-center gap-2"><span className="text-blue-400 font-medium w-24">เบอร์โทร:</span> <span className="font-mono text-[#001D4A]">{selectedRepair.customer_phone}</span></p>
-                        <div className="text-gray-700 flex items-start gap-2 mt-1">
-                          <span className="text-blue-400 font-medium w-24 shrink-0">สถานที่ซ่อม:</span>
-                          <span className="leading-relaxed font-medium bg-white px-3 py-1.5 rounded-lg border border-blue-50 shadow-sm">{selectedRepair.address} จ.{selectedRepair.province}</span>
-                        </div>
-                        <p className="text-gray-700 flex items-center gap-2 mt-1"><span className="text-blue-400 font-medium w-24">วันที่เข้าซ่อม:</span> <span className="font-semibold text-[#001D4A] bg-blue-100/50 px-2 py-1 rounded-md">{new Date(selectedRepair.repair_date).toLocaleDateString('th-TH')}</span></p>
-                      </>
-                    ) : (
-                      <p className="text-gray-500 italic text-sm py-2 text-center bg-white/50 rounded-lg border border-dashed border-gray-200">ลูกค้ายื่นขอประเมินราคา (ยังไม่ถึงขั้นตอนระบุที่อยู่และเบอร์โทร)</p>
-                    )}
+                {selectedRepair.type === 'booking' && (
+                  <div className="bg-gradient-to-br from-blue-50 to-white p-5 rounded-2xl border border-blue-100 shadow-sm">
+                    <h4 className="text-sm font-bold text-[#001D4A] flex items-center gap-2 mb-4 pb-2 border-b border-blue-200/50">
+                      <User size={18} className="text-blue-600" /> ข้อมูลติดต่อหน้างาน
+                    </h4>
+                    <div className="space-y-2.5">
+                      <p className="text-gray-700 flex items-center gap-2"><span className="text-blue-400 font-medium w-24">ชื่อผู้แจ้ง:</span> <span className="font-semibold text-[#001D4A]">{selectedRepair.customer_name}</span></p>
+                      <p className="text-gray-700 flex items-center gap-2"><span className="text-blue-400 font-medium w-24">เบอร์โทร:</span> <span className="font-mono text-[#001D4A]">{selectedRepair.customer_phone}</span></p>
+                      <div className="text-gray-700 flex items-start gap-2 mt-1">
+                        <span className="text-blue-400 font-medium w-24 shrink-0">สถานที่ซ่อม:</span>
+                        <span className="leading-relaxed font-medium bg-white px-3 py-1.5 rounded-lg border border-blue-50 shadow-sm">{selectedRepair.address} จ.{selectedRepair.province}</span>
+                      </div>
+                      <p className="text-gray-700 flex items-center gap-2 mt-1"><span className="text-blue-400 font-medium w-24">วันที่เข้าซ่อม:</span> <span className="font-semibold text-[#001D4A] bg-blue-100/50 px-2 py-1 rounded-md">{new Date(selectedRepair.repair_date).toLocaleDateString('th-TH')}</span></p>
+                    </div>
                   </div>
-                </div>
+                )}
 
                 {/* 3. อาการ/จุดเสียหาย */}
                 <div className="bg-gradient-to-br from-amber-50 to-orange-50/30 p-5 rounded-2xl border border-amber-100 shadow-sm">
@@ -796,8 +989,8 @@ export default function AdminDashboard({ setView }) {
                       <div>
                         <label className="block text-sm font-semibold text-[#001D4A] mb-2 flex items-center gap-1"><DollarSign size={16}/> ราคาประเมินเบื้องต้น (บาท)</label>
                         <input 
-                          type="number" 
-                          placeholder="กรอกราคาประเมิน..."
+                          type="text" 
+                          placeholder="ระบุเป็นช่วงราคา เช่น 3,000 - 5,000"
                           value={repairForm.admin_price}
                           onChange={e => setRepairForm({...repairForm, admin_price: e.target.value})}
                           className="w-full px-4 py-3 rounded-xl border border-blue-200 outline-none focus:border-[#001D4A] focus:ring-1 focus:ring-[#001D4A] text-lg font-semibold text-[#001D4A] shadow-sm" 
@@ -820,7 +1013,7 @@ export default function AdminDashboard({ setView }) {
                   {selectedRepair.type === 'booking' && selectedRepair.repair_requests?.admin_price && (
                     <div className="bg-white p-5 rounded-2xl border border-blue-100 mb-2 shadow-sm">
                       <p className="text-xs text-blue-400 font-semibold mb-1 uppercase tracking-wider">ราคาที่ประเมินไว้</p>
-                      <p className="text-3xl font-black text-[#001D4A]">฿{Number(selectedRepair.repair_requests.admin_price).toLocaleString()}</p>
+                      <p className="text-3xl font-black text-[#001D4A]">{formatAdminPrice(selectedRepair.repair_requests.admin_price)}</p>
                     </div>
                   )}
 
@@ -834,19 +1027,22 @@ export default function AdminDashboard({ setView }) {
                       className={`w-full text-sm font-bold rounded-xl px-4 py-3.5 border outline-none cursor-pointer transition-colors shadow-sm
                         ${repairForm.status === 'approved' ? 'bg-green-100 border-green-300 text-green-800' : 
                           repairForm.status === 'rejected' ? 'bg-red-100 border-red-300 text-red-800' : 
-                          'bg-amber-100 border-amber-300 text-amber-800'}`}
+                          repairForm.status === 'user_cancelled' ? 'bg-gray-100 border-gray-300 text-gray-600' : 
+                          'bg-white border-gray-200 text-gray-700'}`}
                     >
                       {selectedRepair.type === 'booking' ? (
                         <>
                           <option value="pending_payment">รอตรวจสอบสลิปมัดจำ</option>
                           <option value="approved">ตรวจสอบสลิปถูกต้อง / อนุมัติคิวช่าง</option>
                           <option value="rejected">สลิปไม่ถูกต้อง / ยกเลิกคิวงาน</option>
+                          <option value="user_cancelled" disabled={repairForm.status !== 'user_cancelled'}>ผู้ใช้ยกเลิกเอง</option>
                         </>
                       ) : (
                         <>
                           <option value="pending_eval">รอการประเมินราคาจากช่าง</option>
                           <option value="evaluated">ประเมินและส่งราคาให้ลูกค้าแล้ว</option>
                           <option value="rejected">ไม่สามารถรับงานได้ / ยกเลิก</option>
+                          <option value="user_cancelled" disabled={repairForm.status !== 'user_cancelled'}>ผู้ใช้ยกเลิกเอง</option>
                         </>
                       )}
                     </select>

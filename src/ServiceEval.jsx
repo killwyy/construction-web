@@ -56,19 +56,19 @@ export default function ServiceEval({ setView }) {
             {services.map(s => (
               <div key={s.id} onClick={() => handleSelectService(s)} className="p-8 rounded-2xl border border-gray-100 hover:border-[#001D4A] cursor-pointer flex items-center justify-between transition-all group shadow-sm hover:shadow-md">
                 <div className="flex items-center gap-6">
-                  <div className="w-16 h-16 bg-blue-50 text-[#001D4A] rounded-2xl flex items-center justify-center">{s.title.includes('ตรวจรับ') ? <Building size={28}/> : <Home size={28}/>}</div>
+                  <div className="w-16 h-16 bg-blue-50 text-[#001D4A] rounded-2xl flex items-center justify-center">{s.title.includes('ตรวจรับ') ? <Building size={28} /> : <Home size={28} />}</div>
                   <div>
                     <h2 className="text-2xl font-bold text-[#001D4A] mb-1">{s.title}</h2>
                     <p className="text-gray-500 font-light text-base">{s.description}</p>
                   </div>
                 </div>
-                <ChevronRight className="text-gray-300 group-hover:text-[#001D4A]" size={24}/>
+                <ChevronRight className="text-gray-300 group-hover:text-[#001D4A]" size={24} />
               </div>
             ))}
           </div>
         ) : (
           <div className="animate-in slide-in-from-right-4 duration-500">
-            <button onClick={() => setSelectedService(null)} className="mb-8 flex items-center gap-2 font-bold text-gray-400 hover:text-[#001D4A]"><ArrowLeft size={18}/> ย้อนกลับ</button>
+            <button onClick={() => setSelectedService(null)} className="mb-8 flex items-center gap-2 font-bold text-gray-400 hover:text-[#001D4A]"><ArrowLeft size={18} /> ย้อนกลับ</button>
             <h2 className="text-4xl font-bold text-[#001D4A] mb-8">{selectedService.title}</h2>
             <div className="grid gap-4 mb-10">
               {selectedService.options.map((opt, i) => (
@@ -85,7 +85,7 @@ export default function ServiceEval({ setView }) {
               </div>
               {/* 📍 จุดสำคัญ: เรียกไปที่ 'eval-booking' ตรงนี้ครับ */}
               <button onClick={() => setView('eval-booking', selectedOption)} className="bg-white text-[#001D4A] px-8 py-4 rounded-full font-bold hover:bg-gray-100 transition-all flex items-center gap-2">
-                จองคิวประเมิน <DollarSign size={18}/>
+                จองคิวประเมิน <DollarSign size={18} />
               </button>
             </div>
           </div>
@@ -102,7 +102,7 @@ export default function ServiceEval({ setView }) {
             <p className="text-gray-500 text-sm leading-relaxed mb-6">คุณต้องเข้าสู่ระบบก่อนเพื่อดำเนินการต่อ</p>
             <button
               onClick={() => { setAlertModal(false); setView('login'); }}
-              className="w-full py-3.5 rounded-full font-bold text-base text-white bg-[#001D4A] hover:bg-blue-900 transition-all shadow-md"
+              className="w-full py-3.5 rounded-full font-bold text-base text-white bg-[#001D4A] hover:bg-blue-900 transition-colors shadow-md"
             >
               ไปหน้าเข้าสู่ระบบ
             </button>

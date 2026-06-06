@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from './supabase';
-import { Lock, Mail, User as UserIcon, ArrowLeft, Loader2, Eye, EyeOff } from 'lucide-react';
+import { Lock, Mail, User as UserIcon, ArrowLeft, Loader2, Eye, EyeOff, X } from 'lucide-react'; // 📍 เพิ่ม X icon สำหรับปิด Modal ลืมรหัสผ่าน
 
 export default function Login({ setView }) {
   const [isRightPanelActive, setIsRightPanelActive] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [modal, setModal] = useState(null);
+  const [modal, setModal] = useState(null); // { type: 'success' | 'error', title, message }
 
   const [signInEmail, setSignInEmail] = useState('');
   const [signInPassword, setSignInPassword] = useState('');
@@ -16,6 +16,11 @@ export default function Login({ setView }) {
 
   const [showSignInPassword, setShowSignInPassword] = useState(false);
   const [showSignUpPassword, setShowSignUpPassword] = useState(false);
+
+  // 📍 1. เพิ่ม State สำหรับ Modal ลืมรหัสผ่าน
+  const [forgotPasswordModal, setForgotPasswordModal] = useState(false);
+  const [resetEmail, setResetEmail] = useState('');
+  const [isResetting, setIsResetting] = useState(false);
 
   useEffect(() => {
     setSignInEmail('');
@@ -93,18 +98,42 @@ export default function Login({ setView }) {
     }
   };
 
-  // 📍 จุดที่แก้ไข: ให้ปุ่มเชื่อมต่อกับหน้าต่างล็อคอิน Google
   const handleGoogleLogin = async () => {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        // ให้เด้งกลับมาที่หน้าเว็บของเราอัตโนมัติ (localhost หรือโดเมนจริง)
         redirectTo: window.location.origin
       }
     });
 
     if (error) {
       setModal({ type: 'error', title: 'เกิดข้อผิดพลาดจาก Google', message: error.message });
+    }
+  };
+
+  // 📍 2. ฟังก์ชันจัดการการลืมรหัสผ่าน
+  const handleForgotPassword = async (e) => {
+    e.preventDefault();
+    if (!resetEmail) {
+      setModal({ type: 'error', title: 'เกิดข้อผิดพลาด', message: 'กรุณากรอกอีเมลของคุณ' });
+      return;
+    }
+
+    setIsResetting(true);
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(resetEmail, {
+        redirectTo: `${window.location.origin}/#update-password`, // หรือ URL หน้าที่คุณต้องการให้กลับมาเปลี่ยนรหัส
+      });
+
+      if (error) throw error;
+
+      setForgotPasswordModal(false);
+      setModal({ type: 'success', title: 'ส่งลิงก์รีเซ็ตรหัสผ่านแล้ว', message: 'กรุณาตรวจสอบกล่องจดหมาย (Inbox) หรือโฟลเดอร์สแปม (Spam) ของคุณ' });
+      setResetEmail('');
+    } catch (error) {
+      setModal({ type: 'error', title: 'ส่งลิงก์ไม่สำเร็จ', message: error.message || 'เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง' });
+    } finally {
+      setIsResetting(false);
     }
   };
 
@@ -337,7 +366,14 @@ export default function Login({ setView }) {
               </button>
             </div>
             <div className="w-full flex justify-center mb-6 mt-2">
-              <a href="#" className="text-sm font-medium text-gray-500 hover:text-[#001D4A] underline transition-colors">ลืมรหัสผ่าน?</a>
+              {/* 📍 3. ทำให้ปุ่มลืมรหัสผ่านเปิด Modal ได้ */}
+              <button
+                type="button"
+                onClick={() => setForgotPasswordModal(true)}
+                className="text-sm font-medium text-gray-500 hover:text-[#001D4A] underline transition-colors"
+              >
+                ลืมรหัสผ่าน?
+              </button>
             </div>
             <button type="submit" disabled={isLoading} className="bg-[#001D4A] text-white font-bold text-sm px-14 py-3.5 rounded-full uppercase tracking-wider hover:bg-blue-900 transition-all shadow-md w-full flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed">
               {isLoading ? <><Loader2 size={18} className="animate-spin" /> กำลังเข้าสู่ระบบ...</> : 'เข้าสู่ระบบ'}
@@ -381,9 +417,52 @@ export default function Login({ setView }) {
 
       </div>
 
-      {/* Custom Modal */}
-      {modal && (
+      {/* 📍 4. เพิ่ม Modal สำหรับลืมรหัสผ่าน */}
+      {forgotPasswordModal && (
         <div className="fixed inset-0 z-[999] flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.45)', backdropFilter: 'blur(4px)' }}>
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md p-8 flex flex-col items-center animate-[fadeInScale_0.2s_ease-out] relative">
+            <button
+              onClick={() => setForgotPasswordModal(false)}
+              className="absolute top-4 right-4 p-2 text-gray-400 hover:text-gray-600 bg-gray-50 rounded-full transition-colors"
+            >
+              <X size={20} />
+            </button>
+
+            <div className="w-16 h-16 rounded-full flex items-center justify-center mb-5 bg-blue-50">
+              <Lock className="w-8 h-8 text-[#001D4A]" strokeWidth={2.5} />
+            </div>
+            <h3 className="text-xl font-bold text-[#001D4A] mb-2 text-center">ลืมรหัสผ่านใช่ไหม?</h3>
+            <p className="text-gray-500 text-sm leading-relaxed mb-6 text-center">
+              กรุณากรอกอีเมลที่คุณใช้สมัครสมาชิก เราจะส่งลิงก์สำหรับตั้งรหัสผ่านใหม่ไปให้คุณ
+            </p>
+
+            <form onSubmit={handleForgotPassword} className="w-full flex flex-col items-center">
+              <div className="w-full relative mb-6">
+                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none"><Mail className="h-5 w-5 text-gray-400" /></div>
+                <input
+                  type="email"
+                  placeholder="กรอกอีเมลของคุณที่นี่..."
+                  value={resetEmail}
+                  onChange={(e) => setResetEmail(e.target.value)}
+                  className="w-full bg-gray-100 border-none pl-12 pr-4 py-3.5 rounded-xl outline-none focus:ring-2 focus:ring-[#001D4A] text-sm"
+                  required
+                />
+              </div>
+              <button
+                type="submit"
+                disabled={isResetting}
+                className="w-full py-3.5 rounded-full font-bold text-sm text-white bg-[#001D4A] hover:bg-blue-900 transition-all shadow-md flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                {isResetting ? <><Loader2 size={18} className="animate-spin" /> กำลังส่งลิงก์...</> : 'ส่งลิงก์รีเซ็ตรหัสผ่าน'}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Custom Modal แจ้งเตือนทั่วไป */}
+      {modal && (
+        <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.45)', backdropFilter: 'blur(4px)' }}>
           <div className="bg-white rounded-3xl shadow-2xl w-full max-w-sm p-8 flex flex-col items-center text-center animate-[fadeInScale_0.2s_ease-out]">
             <div className={`w-16 h-16 rounded-full flex items-center justify-center mb-5 ${modal.type === 'success' ? 'bg-green-100' : 'bg-red-100'}`}>
               {modal.type === 'success' ? (
@@ -398,7 +477,7 @@ export default function Login({ setView }) {
               onClick={() => setModal(null)}
               className={`w-full py-3 rounded-full font-bold text-sm text-white transition-all shadow-md ${modal.type === 'success' ? 'bg-[#001D4A] hover:bg-blue-900' : 'bg-red-500 hover:bg-red-600'}`}
             >
-              {modal.type === 'success' ? 'เข้าสู่ระบบเลย' : 'ตกลง'}
+              {modal.type === 'success' && modal.title === 'สมัครสมาชิกสำเร็จ! 🎉' ? 'เข้าสู่ระบบเลย' : 'ตกลง'}
             </button>
           </div>
         </div>

@@ -8,6 +8,31 @@ import {
   Shield, Bell, CreditCard, Settings, Trash2, AlertTriangle
 } from 'lucide-react';
 
+const formatAdminPrice = (price) => {
+  if (!price) return '---';
+  const cleanPrice = price.toString().trim();
+  const rawNum = cleanPrice.replace(/,/g, '');
+  const num = Number(rawNum);
+  if (!isNaN(num) && rawNum !== '') {
+    return `฿${num.toLocaleString()}`;
+  }
+  return cleanPrice.startsWith('฿') ? cleanPrice : `฿${cleanPrice}`;
+};
+
+const extractPriceRange = (item) => {
+  if (!item) return { price: '', reply: '' };
+  const reply = item.admin_reply || '';
+  const priceCol = item.admin_price;
+  
+  const match = reply.match(/\|\|__PRICE_RANGE:(.*?)__\|\|/);
+  if (match) {
+    const rangePrice = match[1];
+    const cleanReply = reply.replace(/\|\|__PRICE_RANGE:.*?__\|\|/, '');
+    return { price: rangePrice, reply: cleanReply };
+  }
+  return { price: priceCol ? priceCol.toString() : '', reply: reply };
+};
+
 /* ─────────────────────────────────────────────
    CancelConfirmModal – โมดัลยืนยันยกเลิกการจอง
 ───────────────────────────────────────────── */
@@ -242,7 +267,17 @@ export default function UserProfile({ setView }) {
         supabase.from('eval_bookings').select('*').order('created_at', { ascending: false }),
       ]);
 
-      const repairs = (repairsRes.data || []).map(r => ({ ...r, _type: 'repair', _label: 'แจ้งซ่อมแซม', _title: r.category || 'แจ้งซ่อม' }));
+      const repairs = (repairsRes.data || []).map(r => {
+        const { price, reply } = extractPriceRange(r);
+        return {
+          ...r,
+          admin_price: price,
+          admin_reply: reply,
+          _type: 'repair',
+          _label: 'แจ้งซ่อมแซม',
+          _title: r.category || 'แจ้งซ่อม'
+        };
+      });
       const bookings = (bookingsRes.data || []).map(b => ({ ...b, _type: 'build', _label: 'จองสร้างบ้าน', _title: b.house_title || 'จองสร้างบ้าน' }));
       const installs = (installsRes.data || []).map(i => ({ ...i, _type: 'install', _label: 'ติดตั้ง/ต่อเติม', _title: i.service_title || 'จองติดตั้ง' }));
       const evals = (evalsRes.data || []).map(e => ({ ...e, _type: 'eval', _label: 'ประเมินและตรวจรับ', _title: e.service_type || 'จองประเมิน' }));
@@ -277,7 +312,7 @@ export default function UserProfile({ setView }) {
     try {
       const { error } = await supabase
         .from(table)
-        .update({ status: 'rejected' })
+        .update({ status: 'user_cancelled' })
         .eq('id', item.id);
       if (error) throw error;
       fetchAllHistory();
@@ -308,7 +343,8 @@ export default function UserProfile({ setView }) {
       case 'evaluated': return <span className={`${base} bg-emerald-100 text-emerald-700 border-emerald-200`}><BadgeCheck size={14} />ประเมินราคาแล้ว</span>;
       case 'booked': return <span className={`${base} bg-blue-100 text-blue-700 border-blue-200`}><CheckCircle2 size={14} />จองคิวแล้ว</span>;
       case 'approved': return <span className={`${base} bg-green-100 text-green-700 border-green-200`}><CheckCircle2 size={14} />อนุมัติแล้ว</span>;
-      case 'rejected': return <span className={`${base} bg-red-100 text-red-700 border-red-200`}><XCircle size={14} />ยกเลิก</span>;
+      case 'rejected': return <span className={`${base} bg-red-100 text-red-700 border-red-200`}><XCircle size={14} />ไม่ผ่านการอนุมัติ</span>;
+      case 'user_cancelled': return <span className={`${base} bg-gray-100 text-gray-500 border-gray-200`}><XCircle size={14} />ผู้ใช้ยกเลิกการจอง</span>;
       case 'completed': return <span className={`${base} bg-green-100 text-green-700 border-green-200`}><Star size={14} />เสร็จสมบูรณ์</span>;
       default: return <span className={`${base} bg-amber-100 text-amber-700 border-amber-200`}><Clock size={14} />รอดำเนินการ</span>;
     }
@@ -316,7 +352,7 @@ export default function UserProfile({ setView }) {
 
   /* ── ปุ่มยกเลิกการจอง (ใช้ร่วมกันทุกประเภท) ── */
   const CancelButton = ({ item }) => {
-    if (item.status === 'rejected' || item.status === 'completed') return null;
+    if (item.status === 'rejected' || item.status === 'user_cancelled' || item.status === 'completed') return null;
     return (
       <button onClick={() => setCancelItem(item)}
         className="w-full py-3.5 border-2 border-red-200 text-red-600 rounded-2xl font-bold text-base hover:bg-red-50 transition-all flex items-center justify-center gap-2 mt-3">
@@ -359,7 +395,7 @@ export default function UserProfile({ setView }) {
           {item.admin_price && (
             <div className="flex items-center justify-between p-5 bg-emerald-50 rounded-2xl border border-emerald-200">
               <span className="text-lg font-bold text-gray-600">ราคาประเมินเบื้องต้น</span>
-              <span className="text-3xl font-black text-emerald-700">฿{Number(item.admin_price).toLocaleString()}</span>
+              <span className="text-3xl font-black text-emerald-700">{formatAdminPrice(item.admin_price)}</span>
             </div>
           )}
 
