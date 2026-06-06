@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from './supabase';
-import { Lock, Mail, User as UserIcon, ArrowLeft, Loader2 } from 'lucide-react';
+import { Lock, Mail, User as UserIcon, ArrowLeft, Loader2, Eye, EyeOff } from 'lucide-react';
 
 export default function Login({ setView }) {
   const [isRightPanelActive, setIsRightPanelActive] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [modal, setModal] = useState(null); // { type: 'success' | 'error', title, message }
+  const [modal, setModal] = useState(null);
 
   const [signInEmail, setSignInEmail] = useState('');
   const [signInPassword, setSignInPassword] = useState('');
@@ -14,7 +14,9 @@ export default function Login({ setView }) {
   const [signUpEmail, setSignUpEmail] = useState('');
   const [signUpPassword, setSignUpPassword] = useState('');
 
-  // รีเซ็ตฟอร์มทุกครั้งที่โหลดหน้า
+  const [showSignInPassword, setShowSignInPassword] = useState(false);
+  const [showSignUpPassword, setShowSignUpPassword] = useState(false);
+
   useEffect(() => {
     setSignInEmail('');
     setSignInPassword('');
@@ -66,7 +68,6 @@ export default function Login({ setView }) {
 
       if (error) throw error;
 
-      // Supabase ไม่ throw error เมื่ออีเมลซ้ำ แต่ return identities = []
       if (data?.user && data.user.identities && data.user.identities.length === 0) {
         setModal({ type: 'error', title: 'อีเมลนี้ถูกใช้งานแล้ว', message: 'มีบัญชีที่ใช้อีเมลนี้อยู่แล้ว กรุณาใช้อีเมลอื่นหรือกดเข้าสู่ระบบ' });
         return;
@@ -92,13 +93,24 @@ export default function Login({ setView }) {
     }
   };
 
-  const handleGoogleLogin = () => {
-    setModal({ type: 'error', title: 'ยังไม่พร้อมใช้งาน', message: 'ระบบ Google Login กำลังอยู่ในระหว่างการพัฒนา' });
+  // 📍 จุดที่แก้ไข: ให้ปุ่มเชื่อมต่อกับหน้าต่างล็อคอิน Google
+  const handleGoogleLogin = async () => {
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        // ให้เด้งกลับมาที่หน้าเว็บของเราอัตโนมัติ (localhost หรือโดเมนจริง)
+        redirectTo: window.location.origin
+      }
+    });
+
+    if (error) {
+      setModal({ type: 'error', title: 'เกิดข้อผิดพลาดจาก Google', message: error.message });
+    }
   };
 
   return (
     <div className="bg-gray-50 min-h-screen flex items-center justify-center p-4 relative overflow-hidden">
-      
+
       <style>
         {`
           .auth-container {
@@ -203,9 +215,9 @@ export default function Login({ setView }) {
 
         {/* ฟอร์มสมัครสมาชิก */}
         <div className="form-container sign-up-container p-10 flex flex-col justify-center items-center bg-white relative">
-          
-          <button 
-            onClick={() => setView('home')} 
+
+          <button
+            onClick={() => setView('home')}
             className="absolute top-8 left-8 flex items-center gap-2 text-gray-400 hover:text-[#001D4A] font-semibold transition-colors text-sm"
           >
             <ArrowLeft size={18} /> กลับหน้าหลัก
@@ -244,7 +256,22 @@ export default function Login({ setView }) {
             </div>
             <div className="w-full relative mb-6">
               <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none"><Lock className="h-5 w-5 text-gray-400" /></div>
-              <input type="password" placeholder="รหัสผ่าน" autoComplete="new-password" value={signUpPassword} onChange={e => setSignUpPassword(e.target.value)} className="w-full bg-gray-100 border-none pl-12 pr-4 py-3.5 rounded-xl outline-none focus:ring-2 focus:ring-[#001D4A] text-sm" required />
+              <input
+                type={showSignUpPassword ? "text" : "password"}
+                placeholder="รหัสผ่าน"
+                autoComplete="new-password"
+                value={signUpPassword}
+                onChange={e => setSignUpPassword(e.target.value)}
+                className="w-full bg-gray-100 border-none pl-12 pr-12 py-3.5 rounded-xl outline-none focus:ring-2 focus:ring-[#001D4A] text-sm"
+                required
+              />
+              <button
+                type="button"
+                onClick={() => setShowSignUpPassword(!showSignUpPassword)}
+                className="absolute inset-y-0 right-0 pr-4 flex items-center text-gray-400 hover:text-[#001D4A]"
+              >
+                {showSignUpPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+              </button>
             </div>
             <button type="submit" disabled={isLoading} className="bg-[#001D4A] text-white font-bold text-sm px-14 py-3.5 rounded-full uppercase tracking-wider hover:bg-blue-900 transition-all shadow-md w-full flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed">
               {isLoading ? <><Loader2 size={18} className="animate-spin" /> กำลังสมัคร...</> : 'สมัครสมาชิก'}
@@ -255,9 +282,9 @@ export default function Login({ setView }) {
 
         {/* ฟอร์มเข้าสู่ระบบ */}
         <div className="form-container sign-in-container p-10 flex flex-col justify-center items-center bg-white relative">
-          
-          <button 
-            onClick={() => setView('home')} 
+
+          <button
+            onClick={() => setView('home')}
             className="absolute top-8 left-8 flex items-center gap-2 text-gray-400 hover:text-[#001D4A] font-semibold transition-colors text-sm"
           >
             <ArrowLeft size={18} /> กลับหน้าหลัก
@@ -292,7 +319,22 @@ export default function Login({ setView }) {
             </div>
             <div className="w-full relative mb-2">
               <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none"><Lock className="h-5 w-5 text-gray-400" /></div>
-              <input type="password" placeholder="รหัสผ่าน" autoComplete="new-password" value={signInPassword} onChange={e => setSignInPassword(e.target.value)} className="w-full bg-gray-100 border-none pl-12 pr-4 py-3.5 rounded-xl outline-none focus:ring-2 focus:ring-[#001D4A] text-sm" required />
+              <input
+                type={showSignInPassword ? "text" : "password"}
+                placeholder="รหัสผ่าน"
+                autoComplete="current-password"
+                value={signInPassword}
+                onChange={e => setSignInPassword(e.target.value)}
+                className="w-full bg-gray-100 border-none pl-12 pr-12 py-3.5 rounded-xl outline-none focus:ring-2 focus:ring-[#001D4A] text-sm"
+                required
+              />
+              <button
+                type="button"
+                onClick={() => setShowSignInPassword(!showSignInPassword)}
+                className="absolute inset-y-0 right-0 pr-4 flex items-center text-gray-400 hover:text-[#001D4A]"
+              >
+                {showSignInPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+              </button>
             </div>
             <div className="w-full flex justify-center mb-6 mt-2">
               <a href="#" className="text-sm font-medium text-gray-500 hover:text-[#001D4A] underline transition-colors">ลืมรหัสผ่าน?</a>
@@ -307,13 +349,13 @@ export default function Login({ setView }) {
         {/* Overlay สีน้ำเงิน */}
         <div className="overlay-container pointer-events-none">
           <div className="overlay pointer-events-auto">
-            
+
             <div className="overlay-panel overlay-left">
               <h2 className="text-3xl font-bold mb-4">ยินดีต้อนรับกลับมา!</h2>
               <p className="text-sm font-light leading-relaxed mb-8 px-6 opacity-90">
-                หากคุณมีบัญชีอยู่แล้ว<br/>เข้าสู่ระบบเพื่อใช้งานฟีเจอร์ทั้งหมดได้เลย
+                หากคุณมีบัญชีอยู่แล้ว<br />เข้าสู่ระบบเพื่อใช้งานฟีเจอร์ทั้งหมดได้เลย
               </p>
-              <button 
+              <button
                 onClick={() => setIsRightPanelActive(false)}
                 className="bg-transparent border-2 border-white text-white font-bold text-sm px-14 py-3 rounded-full uppercase tracking-wider hover:bg-white hover:text-[#001D4A] transition-all"
               >
@@ -324,9 +366,9 @@ export default function Login({ setView }) {
             <div className="overlay-panel overlay-right">
               <h2 className="text-3xl font-bold mb-4">สวัสดีครับ,ยินดีต้อนรับ!</h2>
               <p className="text-sm font-light leading-relaxed mb-8 px-6 opacity-90">
-                ยังไม่มีบัญชีใช่ไหม?<br/>สมัครสมาชิกเพื่อเริ่มต้นใช้งานเว็บไซต์ก่อสร้างของเรา
+                ยังไม่มีบัญชีใช่ไหม?<br />สมัครสมาชิกเพื่อเริ่มต้นใช้งานเว็บไซต์ก่อสร้างของเรา
               </p>
-              <button 
+              <button
                 onClick={() => setIsRightPanelActive(true)}
                 className="bg-transparent border-2 border-white text-white font-bold text-sm px-14 py-3 rounded-full uppercase tracking-wider hover:bg-white hover:text-[#001D4A] transition-all shadow-md"
               >

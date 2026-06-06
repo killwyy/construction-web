@@ -44,9 +44,10 @@ function CustomDropdown({ label, options, value, onChange }) {
   );
 }
 
-export default function ServiceContent({ onViewDetail }) {
+export default function ServiceContent({ onViewDetail, setView }) {
   const [houseModels, setHouseModels] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [alertModal, setAlertModal] = useState(false);
 
   const [filterStyle, setFilterStyle] = useState('ทั้งหมด');
   const [filterFloors, setFilterFloors] = useState('ทั้งหมด');
@@ -201,7 +202,11 @@ export default function ServiceContent({ onViewDetail }) {
                       </div>
                       
                       <button 
-                        onClick={() => onViewDetail(house.id)} 
+                        onClick={async () => {
+                          const { data: { user } } = await supabase.auth.getUser();
+                          if (!user) { setAlertModal(true); return; }
+                          onViewDetail(house.id);
+                        }} 
                         className="bg-blue-600 text-white px-5 py-2 rounded-full text-sm font-bold hover:bg-blue-700 transition hover:shadow-md"
                       >
                         ดูรายละเอียด
@@ -212,41 +217,59 @@ export default function ServiceContent({ onViewDetail }) {
               ))}
             </div>
 
-            {/* แถบตัวเลขแบ่งหน้า (Pagination) โชว์เมื่อมีมากกว่า 1 หน้า */}
-            {totalPages > 1 && (
-              <div className="flex justify-center items-center gap-2 mt-16 border-t pt-10">
-                <button
-                  onClick={prevPage}
-                  disabled={currentPage === 1}
-                  className={`flex items-center gap-1 px-4 py-2 rounded-xl font-bold transition-all ${currentPage === 1 ? 'text-gray-300 cursor-not-allowed' : 'text-[#001D4A] hover:bg-gray-100'}`}
-                >
-                  <ChevronLeft size={18} /> ก่อนหน้า
-                </button>
-                
-                <div className="flex gap-2">
-                  {[...Array(totalPages)].map((_, i) => (
-                    <button
-                      key={i}
-                      onClick={() => paginate(i + 1)}
-                      className={`w-10 h-10 flex items-center justify-center rounded-xl font-bold transition-all ${currentPage === i + 1 ? 'bg-[#001D4A] text-white shadow-md' : 'text-gray-500 hover:bg-gray-100 hover:text-[#001D4A]'}`}
-                    >
-                      {i + 1}
-                    </button>
-                  ))}
-                </div>
+              {/* แถบตัวเลขแบ่งหน้า (Pagination) โชว์เมื่อมีมากกว่า 1 หน้า */}
+              {totalPages > 1 && (
+                <div className="flex justify-center items-center gap-2 mt-16 border-t pt-10">
+                  <button
+                    onClick={prevPage}
+                    disabled={currentPage === 1}
+                    className={`flex items-center gap-1 px-4 py-2 rounded-xl font-bold transition-all ${currentPage === 1 ? 'text-gray-300 cursor-not-allowed' : 'text-[#001D4A] hover:bg-gray-100'}`}
+                  >
+                    <ChevronLeft size={18} /> ก่อนหน้า
+                  </button>
+                  
+                  <div className="flex gap-2">
+                    {[...Array(totalPages)].map((_, i) => (
+                      <button
+                        key={i}
+                        onClick={() => paginate(i + 1)}
+                        className={`w-10 h-10 flex items-center justify-center rounded-xl font-bold transition-all ${currentPage === i + 1 ? 'bg-[#001D4A] text-white shadow-md' : 'text-gray-500 hover:bg-gray-100 hover:text-[#001D4A]'}`}
+                      >
+                        {i + 1}
+                      </button>
+                    ))}
+                  </div>
 
-                <button
-                  onClick={nextPage}
-                  disabled={currentPage === totalPages}
-                  className={`flex items-center gap-1 px-4 py-2 rounded-xl font-bold transition-all ${currentPage === totalPages ? 'text-gray-300 cursor-not-allowed' : 'text-[#001D4A] hover:bg-gray-100'}`}
-                >
-                  ถัดไป <ChevronRight size={18} />
-                </button>
-              </div>
-            )}
-          </>
-        )}
-      </div>
+                  <button
+                    onClick={nextPage}
+                    disabled={currentPage === totalPages}
+                    className={`flex items-center gap-1 px-4 py-2 rounded-xl font-bold transition-all ${currentPage === totalPages ? 'text-gray-300 cursor-not-allowed' : 'text-[#001D4A] hover:bg-gray-100'}`}
+                  >
+                    ถัดไป <ChevronRight size={18} />
+                  </button>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+
+      {alertModal && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="bg-white rounded-3xl w-full max-w-sm shadow-2xl overflow-hidden text-center p-8">
+            <div className="w-20 h-20 mx-auto mb-5 rounded-full bg-red-50 flex items-center justify-center border-2 border-red-100">
+              <svg className="w-10 h-10 text-red-500" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v4m0 4h.01M12 4a8 8 0 100 16A8 8 0 0012 4z" /></svg>
+            </div>
+            <h3 className="text-2xl font-bold text-[#001D4A] mb-2">กรุณาเข้าสู่ระบบ</h3>
+            <p className="text-gray-500 text-sm leading-relaxed mb-6">คุณต้องเข้าสู่ระบบก่อนเพื่อดูรายละเอียดและใช้งานระบบต่างๆของเรา</p>
+            <button
+              onClick={() => { setAlertModal(false); setView('login'); }}
+              className="w-full py-3.5 rounded-full font-bold text-base text-white bg-[#001D4A] hover:bg-blue-900 transition-all shadow-md"
+            >
+              ไปหน้าเข้าสู่ระบบ
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

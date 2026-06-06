@@ -7,6 +7,7 @@ export default function ServiceEval({ setView }) {
   const [loading, setLoading] = useState(true);
   const [selectedService, setSelectedService] = useState(null);
   const [selectedOption, setSelectedOption] = useState(null);
+  const [alertModal, setAlertModal] = useState(false);
 
   useEffect(() => {
     async function fetchEval() {
@@ -23,6 +24,16 @@ export default function ServiceEval({ setView }) {
     }
     fetchEval();
   }, []);
+
+  const handleSelectService = async (s) => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      setAlertModal(true);
+      return;
+    }
+    setSelectedService(s);
+    setSelectedOption(s.options[0]);
+  };
 
   if (loading) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="animate-spin text-[#001D4A]" size={48} /></div>;
 
@@ -43,7 +54,7 @@ export default function ServiceEval({ setView }) {
         {!selectedService ? (
           <div className="animate-in fade-in duration-500 space-y-6">
             {services.map(s => (
-              <div key={s.id} onClick={() => { setSelectedService(s); setSelectedOption(s.options[0]); }} className="p-8 rounded-2xl border border-gray-100 hover:border-[#001D4A] cursor-pointer flex items-center justify-between transition-all group shadow-sm hover:shadow-md">
+              <div key={s.id} onClick={() => handleSelectService(s)} className="p-8 rounded-2xl border border-gray-100 hover:border-[#001D4A] cursor-pointer flex items-center justify-between transition-all group shadow-sm hover:shadow-md">
                 <div className="flex items-center gap-6">
                   <div className="w-16 h-16 bg-blue-50 text-[#001D4A] rounded-2xl flex items-center justify-center">{s.title.includes('ตรวจรับ') ? <Building size={28}/> : <Home size={28}/>}</div>
                   <div>
@@ -80,6 +91,24 @@ export default function ServiceEval({ setView }) {
           </div>
         )}
       </div>
+
+      {alertModal && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="bg-white rounded-3xl w-full max-w-sm shadow-2xl overflow-hidden text-center p-8">
+            <div className="w-20 h-20 mx-auto mb-5 rounded-full bg-red-50 flex items-center justify-center border-2 border-red-100">
+              <svg className="w-10 h-10 text-red-500" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v4m0 4h.01M12 4a8 8 0 100 16A8 8 0 0012 4z" /></svg>
+            </div>
+            <h3 className="text-2xl font-bold text-[#001D4A] mb-2">กรุณาเข้าสู่ระบบ</h3>
+            <p className="text-gray-500 text-sm leading-relaxed mb-6">คุณต้องเข้าสู่ระบบก่อนเพื่อดำเนินการต่อ</p>
+            <button
+              onClick={() => { setAlertModal(false); setView('login'); }}
+              className="w-full py-3.5 rounded-full font-bold text-base text-white bg-[#001D4A] hover:bg-blue-900 transition-all shadow-md"
+            >
+              ไปหน้าเข้าสู่ระบบ
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
