@@ -120,7 +120,7 @@ function HouseModelSlider({ setView }) {
                     <div className="flex items-center justify-between border-t border-gray-100 pt-4">
                       <div>
                         <p className="text-gray-400 text-[10px] font-semibold uppercase tracking-wider">ราคาเริ่มต้น</p>
-                        <p className="text-xl font-bold text-[#001D4A]">฿{house.price?.toLocaleString()}</p>
+                        <p className="text-xl font-bold text-[#001D4A]">{house.price?.toLocaleString()} บาท</p>
                       </div>
                       <span className="text-blue-600 text-xs font-semibold flex items-center gap-1 group-hover:gap-2 transition-all">
                         ดูรายละเอียด <ArrowRight size={13} />

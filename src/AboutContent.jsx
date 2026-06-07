@@ -2,34 +2,34 @@ import { ShieldCheck, HardHat, Users, CheckCircle } from 'lucide-react';
 
 export default function AboutContent() {
   const works = [
-    { 
-      title: 'งานห้องครัว', 
-      desc: 'ปูพื้นใหม่ ทำผนังครัว พร้อมกับตกแต่งที่ทำอาหาร', 
-      img: "/images/about1.jpg" 
+    {
+      title: 'งานห้องครัว',
+      desc: 'ปูพื้นใหม่ ทำผนังครัว พร้อมกับตกแต่งที่ทำอาหาร',
+      img: "/images/about1.jpg"
     },
-    { 
-      title: 'งานหลังคาและกระจก', 
-      desc: 'แซมซ่อมหลังคา และกระจก เก็บงานให้สวยงามเรียบร้อย', 
+    {
+      title: 'งานหลังคาและกระจก',
+      desc: 'แซมซ่อมหลังคา และกระจก เก็บงานให้สวยงามเรียบร้อย',
       img: "/images/about2.jpg"
     },
-    { 
-      title: 'งานพื้นไม้', 
-      desc: 'ปูพื้นไม้ใหม่ ด้วยวัสดุอย่างดี จัดวางให้อย่างเรียบร้อย', 
+    {
+      title: 'งานพื้นไม้',
+      desc: 'ปูพื้นไม้ใหม่ ด้วยวัสดุอย่างดี จัดวางให้อย่างเรียบร้อย',
       img: "/images/about3.avif"
     },
-    { 
-      title: 'งานเทปูนพื้น', 
-      desc: 'ทำซิงค์น้ำใหม่พร้อมปูกระเบื้องรอบๆ ด้วยวัสดุที่สวยงาม', 
+    {
+      title: 'งานเทปูนพื้น',
+      desc: 'ทำซิงค์น้ำใหม่พร้อมปูกระเบื้องรอบๆ ด้วยวัสดุที่สวยงาม',
       img: "/images/about4.jpg"
     },
-    { 
-      title: 'งานรีโนเวทตัวบ้าน', 
-      desc: 'ปูกระเบื้องพื้นใหม่อย่างประณีต และสวยงามตามมาตรฐาน', 
+    {
+      title: 'งานรีโนเวทตัวบ้าน',
+      desc: 'ปูกระเบื้องพื้นใหม่อย่างประณีต และสวยงามตามมาตรฐาน',
       img: "/images/about5.avif"
     },
-    { 
-      title: 'งานทาสี', 
-      desc: 'ทาสีใหม่ทั้งผนังชั้น 2 ภายในห้องและเหล็กตรงบันได', 
+    {
+      title: 'งานทาสี',
+      desc: 'ทาสีใหม่ทั้งผนังชั้น 2 ภายในห้องและเหล็กตรงบันได',
       img: "/images/about6.avif"
     },
   ];
@@ -38,13 +38,13 @@ export default function AboutContent() {
     <div className="bg-white">
       {/* 1. Hero Section */}
       <div className="relative h-[400px] overflow-hidden flex items-center justify-center">
-        <img 
-          src= "/images/about.avif"
+        <img
+          src="/images/about.avif"
           className="absolute inset-0 w-full h-full object-cover brightness-[0.4]"
           alt="Modern Architecture Background"
         />
         <div className="relative z-10 text-center text-white px-4 space-y-4">
-          
+
           {/* ขยายหัวข้อใหญ่สุดเป็น text-6xl */}
           <h1 className="text-6xl font-bold tracking-wide">เกี่ยวกับเรา</h1>
           {/* ขยายซับไตเติลพรีเมียมด้านล่างเป็น text-lg */}
@@ -52,7 +52,7 @@ export default function AboutContent() {
             SITTITHONGKAMDEE CONSTRUCTION
           </p>
         </div>
-        
+
         <div className="absolute bottom-0 left-0 right-0 h-12 bg-white rounded-t-[40px]"></div>
       </div>
 
@@ -61,16 +61,16 @@ export default function AboutContent() {
         <div className="md:col-span-7 space-y-5">
           {/* ขยายข้อความพาดหัวเนื้อหาเป็น text-4xl และ text-3xl */}
           <h2 className="text-4xl font-bold text-[#001D4A] leading-tight">
-            ทำก่อสร้าง มานานกว่า 50 ปี <br/>
+            ทำก่อสร้าง มานานกว่า 50 ปี <br />
             <span className="text-blue-600 text-3xl font-semibold">ด้วยประสบการณ์การทำงานมากมาย</span>
           </h2>
           {/* ขยายเนื้อความอธิบายหลักจากเดิม text-base ขึ้นมาเป็น text-lg */}
           <p className="text-gray-600 leading-relaxed text-lg font-light">
-            เรามีความเชี่ยวชาญด้านงานรับเหมาก่อสร้างทุกประเภท ไม่ว่าจะเป็นบ้านพักอาศัย อาคารพาณิชย์ 
+            เรามีความเชี่ยวชาญด้านงานรับเหมาก่อสร้างทุกประเภท ไม่ว่าจะเป็นบ้านพักอาศัย อาคารพาณิชย์
             หรือสิ่งปลูกสร้างอื่น ๆ เรามุ่งมั่นส่งมอบผลงานที่ได้มาตรฐานสูงสุดด้วยทีมช่างมืออาชีพ
           </p>
         </div>
-        
+
         <div className="md:col-span-5 grid grid-cols-2 gap-6">
           <div className="bg-gray-50 p-7 rounded-2xl border border-gray-100 text-center">
             {/* ขยายตัวเลขสถิติเป็น text-5xl */}
@@ -122,7 +122,7 @@ export default function AboutContent() {
       <div className="max-w-6xl mx-auto px-8 py-24">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-16 gap-6">
           <div>
-            <span className="text-sm font-semibold text-blue-600 uppercase tracking-wider">Our Works</span>
+            <span className="text-sm font-semibold text-blue-600 uppercase tracking-wider"></span>
             {/* ขยายหัวข้อแกลเลอรีเป็น text-4xl */}
             <h2 className="text-4xl font-bold text-[#001D4A] mt-1">ภาพผลงานการันตีคุณภาพ</h2>
           </div>
@@ -133,9 +133,9 @@ export default function AboutContent() {
           {works.map((work, idx) => (
             <div key={idx} className="bg-white border border-gray-100 rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-all group">
               <div className="h-56 overflow-hidden relative">
-                <img 
-                  src={work.img} 
-                  alt={work.title} 
+                <img
+                  src={work.img}
+                  alt={work.title}
                   className="w-full h-full object-cover group-hover:scale-103 transition duration-500"
                 />
                 <div className="absolute top-4 left-4 bg-white/90 backdrop-blur-sm px-3 py-1 rounded-lg text-xs font-semibold text-[#001D4A] flex items-center gap-1">

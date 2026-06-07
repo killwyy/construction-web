@@ -91,6 +91,14 @@ export default function AdminDashboard({ setView }) {
   const [repairRequests, setRepairRequests] = useState([]); 
   const [repairBookings, setRepairBookings] = useState([]); 
 
+  // 📍 แยกระบบติดตั้งและประเมินบ้าน
+  const [installs, setInstalls] = useState([]);
+  const [evaluations, setEvaluations] = useState([]);
+  const [selectedInstall, setSelectedInstall] = useState(null);
+  const [selectedEvaluation, setSelectedEvaluation] = useState(null);
+  const [installForm, setInstallForm] = useState({ status: 'pending' });
+  const [evaluationForm, setEvaluationForm] = useState({ status: 'pending' });
+
   // Profile email lookup
   const [profileMap, setProfileMap] = useState({});
 
@@ -190,15 +198,49 @@ export default function AdminDashboard({ setView }) {
     }
   };
 
+  const fetchInstalls = async () => {
+    try {
+      const { data, error } = await supabase.from('install_requests').select('*').order('created_at', { ascending: false });
+      if (error) throw error;
+      setInstalls(data || []);
+    } catch (error) {
+      console.error('Error fetching installs:', error.message);
+    }
+  };
+
+  const fetchEvaluations = async () => {
+    try {
+      const { data, error } = await supabase.from('eval_bookings').select('*').order('created_at', { ascending: false });
+      if (error) throw error;
+      setEvaluations(data || []);
+    } catch (error) {
+      console.error('Error fetching evaluations:', error.message);
+    }
+  };
+
   useEffect(() => {
     setIsLoading(true);
-    Promise.all([fetchBookings(), fetchHouseModels(), fetchRepairs(), fetchProfiles()]).finally(() => setIsLoading(false));
+    Promise.all([
+      fetchBookings(),
+      fetchHouseModels(),
+      fetchRepairs(),
+      fetchProfiles(),
+      fetchInstalls(),
+      fetchEvaluations()
+    ]).finally(() => setIsLoading(false));
   }, []);
 
   const handleRefresh = async () => {
     setIsLoading(true);
     try {
-      await Promise.all([fetchBookings(), fetchHouseModels(), fetchRepairs(), fetchProfiles()]);
+      await Promise.all([
+        fetchBookings(),
+        fetchHouseModels(),
+        fetchRepairs(),
+        fetchProfiles(),
+        fetchInstalls(),
+        fetchEvaluations()
+      ]);
     } finally {
       setIsLoading(false);
     }
@@ -407,6 +449,84 @@ export default function AdminDashboard({ setView }) {
     });
   };
 
+  const handleUpdateInstallStatus = async (id, newStatus) => {
+    try {
+      const { error } = await supabase.from('install_requests').update({ status: newStatus }).eq('id', id);
+      if (error) throw error;
+      setInstalls(installs.map(i => i.id === id ? { ...i, status: newStatus } : i));
+      if (selectedInstall && selectedInstall.id === id) {
+        setSelectedInstall({ ...selectedInstall, status: newStatus });
+      }
+      setFeedbackModal({ 
+        type: 'success', 
+        title: 'อัปเดตสถานะสำเร็จ!', 
+        message: 'ระบบได้บันทึกการเปลี่ยนแปลงสถานะการติดตั้งเรียบร้อยแล้ว' 
+      });
+    } catch (error) {
+      setFeedbackModal({ type: 'error', title: 'เกิดข้อผิดพลาด', message: error.message });
+    }
+  };
+
+  const handleUpdateEvaluationStatus = async (id, newStatus) => {
+    try {
+      const { error } = await supabase.from('eval_bookings').update({ status: newStatus }).eq('id', id);
+      if (error) throw error;
+      setEvaluations(evaluations.map(e => e.id === id ? { ...e, status: newStatus } : e));
+      if (selectedEvaluation && selectedEvaluation.id === id) {
+        setSelectedEvaluation({ ...selectedEvaluation, status: newStatus });
+      }
+      setFeedbackModal({ 
+        type: 'success', 
+        title: 'อัปเดตสถานะสำเร็จ!', 
+        message: 'ระบบได้บันทึกการเปลี่ยนแปลงสถานะการจ้างประเมินเรียบร้อยแล้ว' 
+      });
+    } catch (error) {
+      setFeedbackModal({ type: 'error', title: 'เกิดข้อผิดพลาด', message: error.message });
+    }
+  };
+
+  const handleDeleteInstall = (id, customerName) => {
+    setConfirmModal({
+      title: 'ยืนยันการลบรายการ',
+      message: `คุณแน่ใจหรือไม่ว่าต้องการลบรายการจองของ "${customerName}"? ข้อมูลที่ถูกลบจะไม่สามารถกู้คืนได้`,
+      onConfirm: async () => {
+        try {
+          setIsSaving(true);
+          const { error } = await supabase.from('install_requests').delete().eq('id', id);
+          if (error) throw error;
+          fetchInstalls();
+          setFeedbackModal({ type: 'success', title: 'ลบข้อมูลสำเร็จ', message: 'ลบรายการจองติดตั้งเรียบร้อยแล้ว' });
+        } catch (error) {
+          setFeedbackModal({ type: 'error', title: 'ลบข้อมูลไม่สำเร็จ', message: error.message });
+        } finally {
+          setIsSaving(false);
+          setConfirmModal(null);
+        }
+      }
+    });
+  };
+
+  const handleDeleteEvaluation = (id, customerName) => {
+    setConfirmModal({
+      title: 'ยืนยันการลบรายการ',
+      message: `คุณแน่ใจหรือไม่ว่าต้องการลบรายการจองของ "${customerName}"? ข้อมูลที่ถูกลบจะไม่สามารถกู้คืนได้`,
+      onConfirm: async () => {
+        try {
+          setIsSaving(true);
+          const { error } = await supabase.from('eval_bookings').delete().eq('id', id);
+          if (error) throw error;
+          fetchEvaluations();
+          setFeedbackModal({ type: 'success', title: 'ลบข้อมูลสำเร็จ', message: 'ลบรายการจองประเมินเรียบร้อยแล้ว' });
+        } catch (error) {
+          setFeedbackModal({ type: 'error', title: 'ลบข้อมูลไม่สำเร็จ', message: error.message });
+        } finally {
+          setIsSaving(false);
+          setConfirmModal(null);
+        }
+      }
+    });
+  };
+
   const StatusBadge = ({ status }) => {
     if (status === 'approved' || status === 'evaluated') return <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-xs font-semibold tracking-wide flex items-center gap-1 w-fit"><CheckCircle2 size={12}/> {status === 'evaluated' ? 'ประเมินแล้ว' : 'ตรวจสอบแล้ว'}</span>;
     if (status === 'rejected') return <span className="bg-red-100 text-red-700 px-3 py-1 rounded-full text-xs font-semibold tracking-wide flex items-center gap-1 w-fit"><X size={12}/> ไม่ผ่าน/ยกเลิก</span>;
@@ -428,11 +548,123 @@ export default function AdminDashboard({ setView }) {
   // 📍 ซ่อนรายการขอประเมินที่ถูกจองแล้วออกไป
   const pendingRequests = repairRequests.filter(r => r.status !== 'booked');
 
+  const getUnifiedPendingRequests = () => {
+    const list = [];
+    
+    // 1. Bookings (pending)
+    (bookings || []).forEach(b => {
+      if (b.status === 'pending') {
+        list.push({
+          id: b.id,
+          type: 'booking',
+          typeLabel: 'จองสร้างบ้านใหม่',
+          customerName: `${b.customer_firstname || ''} ${b.customer_lastname || ''}`.trim(),
+          title: b.house_title || 'แบบบ้านมาตรฐาน',
+          status: b.status,
+          created_at: b.created_at,
+          originalItem: b
+        });
+      }
+    });
+
+    // 2. Repair requests (pending_eval)
+    (repairRequests || []).forEach(r => {
+      if (r.status === 'pending_eval') {
+        list.push({
+          id: r.id,
+          type: 'repair_request',
+          typeLabel: 'แจ้งซ่อมแซม (รอประเมิน)',
+          customerName: r.user_email || '---',
+          title: r.category || 'แจ้งซ่อม',
+          status: r.status,
+          created_at: r.created_at,
+          originalItem: r
+        });
+      }
+    });
+
+    // 3. Repair bookings (pending_payment)
+    (repairBookings || []).forEach(rb => {
+      if (rb.status === 'pending_payment') {
+        list.push({
+          id: rb.id,
+          type: 'repair_booking',
+          typeLabel: 'คิวซ่อม (รอตรวจสลิป)',
+          customerName: rb.customer_name || '---',
+          title: rb.repair_requests?.category || 'คิวซ่อมแซม',
+          status: rb.status,
+          created_at: rb.created_at,
+          originalItem: rb
+        });
+      }
+    });
+
+    // 4. Install requests (pending)
+    (installs || []).forEach(i => {
+      if (i.status === 'pending') {
+        list.push({
+          id: i.id,
+          type: 'install',
+          typeLabel: 'ติดตั้ง/ต่อเติม',
+          customerName: i.customer_name || '---',
+          title: i.service_title || 'งานติดตั้ง',
+          status: i.status,
+          created_at: i.created_at,
+          originalItem: i
+        });
+      }
+    });
+
+    // 5. Evaluation bookings (pending)
+    (evaluations || []).forEach(e => {
+      if (e.status === 'pending') {
+        list.push({
+          id: e.id,
+          type: 'eval',
+          typeLabel: 'ประเมินและตรวจรับ',
+          customerName: e.customer_name || '---',
+          title: e.service_type || 'ตรวจรับบ้าน',
+          status: e.status,
+          created_at: e.created_at,
+          originalItem: e
+        });
+      }
+    });
+
+    return list.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+  };
+
+  const handleViewUnifiedDetail = (item) => {
+    if (item.type === 'booking') {
+      setSelectedBooking(item.originalItem);
+      setActiveTab('models');
+      setSubTab('bookings');
+    } else if (item.type === 'repair_request') {
+      setActiveTab('repairs');
+      setRepairSubTab('requests');
+      handleOpenRepairModal(item.originalItem, 'request');
+    } else if (item.type === 'repair_booking') {
+      setActiveTab('repairs');
+      setRepairSubTab('bookings');
+      handleOpenRepairModal(item.originalItem, 'booking');
+    } else if (item.type === 'install') {
+      setSelectedInstall(item.originalItem);
+      setInstallForm({ status: item.originalItem.status || 'pending' });
+      setActiveTab('extensions');
+    } else if (item.type === 'eval') {
+      setSelectedEvaluation(item.originalItem);
+      setEvaluationForm({ status: item.originalItem.status || 'pending' });
+      setActiveTab('evaluations');
+    }
+  };
+
+  const unifiedPending = getUnifiedPendingRequests();
+
   const stats = [
     { title: "คำสั่งจองสร้างบ้าน", count: bookings.length, icon: Home, color: "bg-blue-50 text-blue-600" },
-    { title: "แจ้งซ่อมบ้าน", count: pendingRequests.length, icon: Wrench, color: "bg-amber-50 text-amber-600" },
-    { title: "จองคิวซ่อม/ตรวจสลิป", count: repairBookings.length, icon: Hammer, color: "bg-purple-50 text-purple-600" },
-    { title: "นัดประเมินหน้างาน", count: 5, icon: ClipboardCheck, color: "bg-green-50 text-green-600" },
+    { title: "แจ้งซ่อมบ้าน & คิวซ่อม", count: pendingRequests.length + repairBookings.length, icon: Wrench, color: "bg-amber-50 text-amber-600" },
+    { title: "ติดตั้ง / ต่อเติม", count: installs.length, icon: Hammer, color: "bg-purple-50 text-purple-600" },
+    { title: "จ้างประเมินและตรวจรับ", count: evaluations.length, icon: ClipboardCheck, color: "bg-green-50 text-green-600" },
   ];
 
   return (
@@ -457,8 +689,12 @@ export default function AdminDashboard({ setView }) {
             <button onClick={() => setActiveTab('repairs')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium tracking-wide transition-all ${activeTab === 'repairs' ? 'bg-white/10 text-white shadow-inner font-bold' : 'text-gray-300 hover:bg-white/5 hover:text-white'}`}>
               <Wrench size={18} /> 2. ระบบซ่อมบ้าน
             </button>
-            <button onClick={() => setActiveTab('extensions')} className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium tracking-wide text-gray-300 hover:bg-white/5 hover:text-white"><Hammer size={18} /> 3. ระบบติดตั้ง/ต่อเติม</button>
-            <button onClick={() => setActiveTab('evaluations')} className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium tracking-wide text-gray-300 hover:bg-white/5 hover:text-white"><ClipboardCheck size={18} /> 4. ระบบจ้างประเมินบ้าน</button>
+            <button onClick={() => setActiveTab('extensions')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium tracking-wide transition-all ${activeTab === 'extensions' ? 'bg-white/10 text-white shadow-inner font-bold' : 'text-gray-300 hover:bg-white/5 hover:text-white'}`}>
+              <Hammer size={18} /> 3. ระบบติดตั้ง/ต่อเติม
+            </button>
+            <button onClick={() => setActiveTab('evaluations')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium tracking-wide transition-all ${activeTab === 'evaluations' ? 'bg-white/10 text-white shadow-inner font-bold' : 'text-gray-300 hover:bg-white/5 hover:text-white'}`}>
+              <ClipboardCheck size={18} /> 4. ระบบจ้างประเมินบ้าน
+            </button>
           </nav>
         </div>
         <button onClick={handleLogout} className="w-full flex items-center gap-3 px-4 py-3 text-red-300 hover:text-red-400 hover:bg-red-500/10 rounded-xl text-sm font-medium tracking-wide transition-colors">
@@ -474,6 +710,8 @@ export default function AdminDashboard({ setView }) {
               {activeTab === 'overview' && 'แดชบอร์ดภาพรวมคิวงาน'}
               {activeTab === 'models' && 'การจัดการแบบบ้านและการจองสร้างบ้าน'}
               {activeTab === 'repairs' && 'ระบบรับแจ้งซ่อมแซมและบำรุงรักษา'}
+              {activeTab === 'extensions' && 'ระบบจัดการงานติดตั้งและต่อเติม'}
+              {activeTab === 'evaluations' && 'ระบบรับจ้างประเมินและตรวจรับบ้าน'}
             </h2>
             <p className="text-sm text-gray-400 font-light tracking-wide mt-1">ยินดีต้อนรับกลับมา, ผู้ดูแลระบบสูงสุด</p>
           </div>
@@ -503,29 +741,56 @@ export default function AdminDashboard({ setView }) {
 
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
               <h3 className="text-xl font-bold text-[#001D4A] mb-5 flex items-center gap-2 tracking-wide">
-                <Clock size={20} className="text-amber-500" /> คำขอล่าสุดที่รอการตรวจสอบ (ระบบจองสร้างบ้านใหม่)
+                <Clock size={20} className="text-amber-500" /> คำขอล่าสุดที่รอการตรวจสอบ (ทุกบริการ)
               </h3>
               <div className="overflow-x-auto">
                 <table className="w-full text-left border-collapse">
                   <thead>
                     <tr className="border-b border-gray-100 text-gray-400 text-xs font-semibold uppercase tracking-widest">
-                      <th className="pb-3 pl-2">ชื่อลูกค้า</th>
-                      <th className="pb-3">รหัสแบบบ้าน</th>
+                      <th className="pb-3 pl-2">บริการ / ระบบ</th>
+                      <th className="pb-3">ชื่อลูกค้า / ผู้ติดต่อ</th>
+                      <th className="pb-3">รายละเอียด / หัวข้อ</th>
+                      <th className="pb-3">วันที่ยื่นเรื่อง</th>
                       <th className="pb-3">สถานะ</th>
                       <th className="pb-3 text-right pr-2">การจัดการ</th>
                     </tr>
                   </thead>
                   <tbody className="text-base font-light text-gray-600 divide-y divide-gray-50">
-                    {bookings.slice(0, 3).map((booking) => (
-                      <tr key={booking.id} className="hover:bg-gray-50/50 transition-colors">
-                        <td className="py-4 pl-2 font-normal text-gray-700">{booking.customer_firstname} {booking.customer_lastname}</td>
-                        <td className="py-4 font-semibold text-[#001D4A]">{booking.house_title}</td>
-                        <td className="py-4"><StatusBadge status={booking.status} /></td>
-                        <td className="py-4 text-right pr-2">
-                          <button onClick={() => { setSelectedBooking(booking); setActiveTab('models'); setSubTab('bookings'); }} className="text-xs bg-[#001D4A] text-white px-3 py-2 rounded-lg font-semibold hover:bg-blue-900 transition-colors">ดูรายละเอียด</button>
+                    {unifiedPending.length === 0 ? (
+                      <tr>
+                        <td colSpan="6" className="py-8 text-center text-gray-400">
+                          ไม่มีคำขอที่รอการตรวจสอบในขณะนี้
                         </td>
                       </tr>
-                    ))}
+                    ) : (
+                      unifiedPending.slice(0, 5).map((item) => (
+                        <tr key={`${item.type}-${item.id}`} className="hover:bg-gray-50/50 transition-colors">
+                          <td className="py-4 pl-2 font-bold text-[#001D4A] text-xs uppercase tracking-wider">
+                            {item.typeLabel}
+                          </td>
+                          <td className="py-4 font-normal text-gray-700">
+                            {item.customerName}
+                          </td>
+                          <td className="py-4 font-semibold text-gray-800">
+                            {item.title}
+                          </td>
+                          <td className="py-4 text-sm text-gray-400 font-mono">
+                            {item.created_at ? new Date(item.created_at).toLocaleDateString('th-TH') : '---'}
+                          </td>
+                          <td className="py-4">
+                            <StatusBadge status={item.status} />
+                          </td>
+                          <td className="py-4 text-right pr-2">
+                            <button 
+                              onClick={() => handleViewUnifiedDetail(item)} 
+                              className="text-xs bg-[#001D4A] text-white px-4 py-1.5 rounded-full font-bold hover:bg-blue-900 transition-colors shadow-sm"
+                            >
+                              ดูรายละเอียด
+                            </button>
+                          </td>
+                        </tr>
+                      ))
+                    )}
                   </tbody>
                 </table>
               </div>
@@ -741,6 +1006,124 @@ export default function AdminDashboard({ setView }) {
               </div>
             )}
 
+          </div>
+        )}
+
+        {/* TAB 3: ระบบติดตั้ง/ต่อเติม */}
+        {activeTab === 'extensions' && (
+          <div className="space-y-6 animate-[fadeInScale_0.15s_ease-out]">
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="border-b border-gray-100 text-gray-400 text-xs font-semibold uppercase tracking-widest">
+                      <th className="pb-3 pl-2">วันที่ยื่นเรื่อง</th>
+                      <th className="pb-3">บริการติดตั้ง/ต่อเติม</th>
+                      <th className="pb-3">ชื่อลูกค้า</th>
+                      <th className="pb-3">เบอร์โทรศัพท์</th>
+                      <th className="pb-3">วันที่นัดหมาย</th>
+                      <th className="pb-3">เงินมัดจำ</th>
+                      <th className="pb-3">สถานะ</th>
+                      <th className="pb-3 text-right pr-2">การจัดการ</th>
+                    </tr>
+                  </thead>
+                  <tbody className="text-base font-light text-gray-600 divide-y divide-gray-50">
+                    {isLoading ? (
+                      <tr><td colSpan="8" className="py-8 text-center text-gray-400">กำลังโหลดข้อมูล...</td></tr>
+                    ) : installs.length === 0 ? (
+                      <tr><td colSpan="8" className="py-8 text-center text-gray-400">ไม่มีรายการจองคิวติดตั้ง/ต่อเติมในระบบ</td></tr>
+                    ) : (
+                      installs.map((item) => (
+                        <tr key={item.id} className="hover:bg-gray-50/50 transition-colors">
+                          <td className="py-4 pl-2 text-gray-500">{item.created_at ? new Date(item.created_at).toLocaleDateString('th-TH') : '---'}</td>
+                          <td className="py-4 font-semibold text-[#001D4A]">{item.service_title}</td>
+                          <td className="py-4 font-normal text-gray-700">{item.customer_name}</td>
+                          <td className="py-4 font-mono text-gray-700">{item.customer_phone}</td>
+                          <td className="py-4 text-gray-500">{item.appointment_date ? new Date(item.appointment_date).toLocaleDateString('th-TH') : '---'}</td>
+                          <td className="py-4 font-semibold text-purple-700">฿{Number(item.deposit_amount || 0).toLocaleString()}</td>
+                          <td className="py-4"><StatusBadge status={item.status} /></td>
+                          <td className="py-4 text-right pr-2">
+                            <div className="flex items-center justify-end gap-2">
+                              <button 
+                                onClick={() => { setSelectedInstall(item); setInstallForm({ status: item.status || 'pending' }); }} 
+                                className="text-xs bg-[#001D4A] text-white px-4 py-1.5 rounded-full font-bold hover:bg-blue-900 transition-colors shadow-sm"
+                              >
+                                ตรวจสอบ / ปรับสถานะ
+                              </button>
+                              <button 
+                                onClick={() => handleDeleteInstall(item.id, item.customer_name)} 
+                                className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors"
+                              >
+                                <Trash2 size={16} />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* TAB 4: ระบบจ้างประเมินบ้าน */}
+        {activeTab === 'evaluations' && (
+          <div className="space-y-6 animate-[fadeInScale_0.15s_ease-out]">
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="border-b border-gray-100 text-gray-400 text-xs font-semibold uppercase tracking-widest">
+                      <th className="pb-3 pl-2">วันที่ยื่นเรื่อง</th>
+                      <th className="pb-3">ประเภทบริการ</th>
+                      <th className="pb-3">ชื่อลูกค้า</th>
+                      <th className="pb-3">เบอร์โทรศัพท์</th>
+                      <th className="pb-3">โครงการ/คอนโด</th>
+                      <th className="pb-3">วันที่นัดหมาย</th>
+                      <th className="pb-3">สถานะ</th>
+                      <th className="pb-3 text-right pr-2">การจัดการ</th>
+                    </tr>
+                  </thead>
+                  <tbody className="text-base font-light text-gray-600 divide-y divide-gray-50">
+                    {isLoading ? (
+                      <tr><td colSpan="8" className="py-8 text-center text-gray-400">กำลังโหลดข้อมูล...</td></tr>
+                    ) : evaluations.length === 0 ? (
+                      <tr><td colSpan="8" className="py-8 text-center text-gray-400">ไม่มีรายการจ้างประเมินและตรวจรับบ้านในระบบ</td></tr>
+                    ) : (
+                      evaluations.map((item) => (
+                        <tr key={item.id} className="hover:bg-gray-50/50 transition-colors">
+                          <td className="py-4 pl-2 text-gray-500">{item.created_at ? new Date(item.created_at).toLocaleDateString('th-TH') : '---'}</td>
+                          <td className="py-4 font-semibold text-[#001D4A]">{item.service_type}</td>
+                          <td className="py-4 font-normal text-gray-700">{item.customer_name}</td>
+                          <td className="py-4 font-mono text-gray-700">{item.phone}</td>
+                          <td className="py-4 text-gray-700">{item.project_name || '---'}</td>
+                          <td className="py-4 text-gray-500">{item.booking_date ? new Date(item.booking_date).toLocaleDateString('th-TH') : '---'}</td>
+                          <td className="py-4"><StatusBadge status={item.status} /></td>
+                          <td className="py-4 text-right pr-2">
+                            <div className="flex items-center justify-end gap-2">
+                              <button 
+                                onClick={() => { setSelectedEvaluation(item); setEvaluationForm({ status: item.status || 'pending' }); }} 
+                                className="text-xs bg-[#001D4A] text-white px-4 py-1.5 rounded-full font-bold hover:bg-blue-900 transition-colors shadow-sm"
+                              >
+                                ตรวจสอบ / ปรับสถานะ
+                              </button>
+                              <button 
+                                onClick={() => handleDeleteEvaluation(item.id, item.customer_name)} 
+                                className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors"
+                              >
+                                <Trash2 size={16} />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
           </div>
         )}
 
@@ -1059,6 +1442,183 @@ export default function AdminDashboard({ setView }) {
               </div>
 
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ---------------- 📍 MODAL: ตรวจสอบรายการติดตั้ง/ต่อเติม ---------------- */}
+      {selectedInstall && (
+        <div className="fixed inset-0 z-[50] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-[fadeInScale_0.2s_ease-out]">
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-4xl overflow-hidden border border-gray-100 flex flex-col">
+            
+            <div className="bg-[#001D4A] p-6 text-white flex justify-between items-center shrink-0">
+              <div>
+                <h3 className="text-xl font-bold tracking-wide flex items-center gap-2">
+                  <Hammer size={22} /> ตรวจสอบรายการติดตั้ง/ต่อเติม: {selectedInstall.service_title}
+                </h3>
+                <p className="text-xs text-blue-200 font-light mt-1 tracking-wide">ID: {selectedInstall.id}</p>
+              </div>
+              <button onClick={() => setSelectedInstall(null)} className="text-white/80 hover:text-white bg-white/10 p-2 rounded-full transition-colors"><X size={18} /></button>
+            </div>
+            
+            <div className="p-8 flex flex-col lg:flex-row gap-8 overflow-y-auto max-h-[70vh]">
+              
+              {/* ฝั่งซ้าย: สลิปมัดจำและที่อยู่ */}
+              <div className="flex-1 space-y-6">
+                
+                {/* 1. สลิปเงินมัดจำ */}
+                <div className="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-100 p-5 rounded-2xl shadow-sm">
+                  <h4 className="text-sm font-bold text-green-800 uppercase tracking-wider flex items-center gap-2 mb-3">
+                    <CreditCard size={18} className="text-green-600" /> หลักฐานการชำระเงินมัดจำ (30%)
+                  </h4>
+                  <div className="space-y-3">
+                    <div className="relative max-w-[220px] aspect-[3/4] overflow-hidden rounded-xl border-2 border-green-200 shadow-md group bg-white mx-auto lg:mx-0">
+                      <img src={selectedInstall.slip_image_url} alt="Install Deposit Slip" className="w-full h-full object-cover" />
+                      <a href={selectedInstall.slip_image_url} target="_blank" rel="noreferrer" className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center text-white text-sm font-bold gap-2 transition-all">
+                        <Eye size={18} /> ดูรูปขนาดเต็ม
+                      </a>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 2. ข้อมูลติดต่อหน้างาน */}
+                <div className="bg-gradient-to-br from-blue-50 to-white p-5 rounded-2xl border border-blue-100 shadow-sm">
+                  <h4 className="text-sm font-bold text-[#001D4A] flex items-center gap-2 mb-4 pb-2 border-b border-blue-200/50">
+                    <User size={18} className="text-blue-600" /> ข้อมูลติดต่อหน้างาน
+                  </h4>
+                  <div className="space-y-2.5">
+                    <p className="text-gray-700 flex items-center gap-2"><span className="text-blue-400 font-medium w-24">ชื่อผู้จอง:</span> <span className="font-semibold text-[#001D4A]">{selectedInstall.customer_name}</span></p>
+                    <p className="text-gray-700 flex items-center gap-2"><span className="text-blue-400 font-medium w-24">เบอร์โทร:</span> <span className="font-mono text-[#001D4A]">{selectedInstall.customer_phone}</span></p>
+                    <div className="text-gray-700 flex items-start gap-2 mt-1">
+                      <span className="text-blue-400 font-medium w-24 shrink-0">สถานที่ติดตั้ง:</span>
+                      <span className="leading-relaxed font-medium bg-white px-3 py-1.5 rounded-lg border border-blue-50 shadow-sm">{selectedInstall.address} จ.{selectedInstall.province}</span>
+                    </div>
+                    <p className="text-gray-700 flex items-center gap-2 mt-1"><span className="text-blue-400 font-medium w-24">วันที่นัดหมาย:</span> <span className="font-semibold text-[#001D4A] bg-blue-100/50 px-2 py-1 rounded-md">{selectedInstall.appointment_date ? new Date(selectedInstall.appointment_date).toLocaleDateString('th-TH') : '---'}</span></p>
+                  </div>
+                </div>
+
+              </div>
+
+              {/* ฝั่งขวา: รายละเอียดการจองมัดจำและปรับสถานะ */}
+              <div className="w-full lg:w-[360px] shrink-0 space-y-6">
+                <div className="bg-gradient-to-br from-purple-50 to-purple-100/30 border border-purple-100 p-6 rounded-2xl shadow-sm">
+                  <h4 className="text-xs text-purple-600 font-bold uppercase tracking-wider mb-1">ยอดชำระมัดจำแล้ว</h4>
+                  <p className="text-3xl font-black text-purple-950">฿{Number(selectedInstall.deposit_amount || 0).toLocaleString()}</p>
+                </div>
+
+                <div className="bg-white border border-gray-200 p-6 rounded-2xl shadow-sm space-y-4">
+                  <h4 className="text-sm font-semibold text-[#001D4A]">ปรับสถานะการตรวจสอบ</h4>
+                  <div>
+                    <select 
+                      value={selectedInstall.status || 'pending'} 
+                      onChange={(e) => handleUpdateInstallStatus(selectedInstall.id, e.target.value)}
+                      className={`w-full text-sm font-bold rounded-xl px-4 py-3.5 border outline-none cursor-pointer transition-colors shadow-sm
+                        ${selectedInstall.status === 'approved' ? 'bg-green-50 border-green-200 text-green-700' : 
+                          selectedInstall.status === 'rejected' ? 'bg-red-50 border-red-200 text-red-700' : 
+                          selectedInstall.status === 'user_cancelled' ? 'bg-gray-50 border-gray-200 text-gray-500' : 
+                          'bg-white border-gray-200 text-gray-700'}`}
+                    >
+                      <option value="pending">รอดำเนินการ</option>
+                      <option value="approved">ตรวจสอบแล้ว (อนุมัติ)</option>
+                      <option value="rejected">ไม่ผ่าน / ยกเลิก</option>
+                      <option value="user_cancelled" disabled={selectedInstall.status !== 'user_cancelled'}>ผู้ใช้ยกเลิกการจอง</option>
+                    </select>
+                  </div>
+                  <p className="text-xs text-gray-400 font-light">เมื่ออนุมัติ คิวงานของลูกค้าจะถูกบันทึกสำเร็จและแสดงในหน้าประวัติบริการ</p>
+                </div>
+              </div>
+
+            </div>
+
+          </div>
+        </div>
+      )}
+
+      {/* ---------------- 📍 MODAL: ตรวจสอบรายการจ้างประเมินบ้าน ---------------- */}
+      {selectedEvaluation && (
+        <div className="fixed inset-0 z-[50] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-[fadeInScale_0.2s_ease-out]">
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-4xl overflow-hidden border border-gray-100 flex flex-col">
+            
+            <div className="bg-[#001D4A] p-6 text-white flex justify-between items-center shrink-0">
+              <div>
+                <h3 className="text-xl font-bold tracking-wide flex items-center gap-2">
+                  <ClipboardCheck size={22} /> ตรวจสอบงานจ้างประเมินและตรวจรับ: {selectedEvaluation.service_type}
+                </h3>
+                <p className="text-xs text-blue-200 font-light mt-1 tracking-wide">ID: {selectedEvaluation.id}</p>
+              </div>
+              <button onClick={() => setSelectedEvaluation(null)} className="text-white/80 hover:text-white bg-white/10 p-2 rounded-full transition-colors"><X size={18} /></button>
+            </div>
+            
+            <div className="p-8 flex flex-col lg:flex-row gap-8 overflow-y-auto max-h-[70vh]">
+              
+              {/* ฝั่งซ้าย: สลิปและที่อยู่ */}
+              <div className="flex-1 space-y-6">
+                
+                {/* 1. สลิปเงินค่าจ้างประเมิน */}
+                <div className="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-100 p-5 rounded-2xl shadow-sm">
+                  <h4 className="text-sm font-bold text-green-800 uppercase tracking-wider flex items-center gap-2 mb-3">
+                    <CreditCard size={18} className="text-green-600" /> หลักฐานการชำระค่าธรรมเนียม
+                  </h4>
+                  <div className="space-y-3">
+                    <div className="relative max-w-[220px] aspect-[3/4] overflow-hidden rounded-xl border-2 border-green-200 shadow-md group bg-white mx-auto lg:mx-0">
+                      <img src={selectedEvaluation.slip_url} alt="Evaluation Booking Slip" className="w-full h-full object-cover" />
+                      <a href={selectedEvaluation.slip_url} target="_blank" rel="noreferrer" className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center text-white text-sm font-bold gap-2 transition-all">
+                        <Eye size={18} /> ดูรูปขนาดเต็ม
+                      </a>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 2. ข้อมูลติดต่อและโครงการ */}
+                <div className="bg-gradient-to-br from-blue-50 to-white p-5 rounded-2xl border border-blue-100 shadow-sm">
+                  <h4 className="text-sm font-bold text-[#001D4A] flex items-center gap-2 mb-4 pb-2 border-b border-blue-200/50">
+                    <User size={18} className="text-blue-600" /> ข้อมูลผู้จองและสถานที่นัดหมาย
+                  </h4>
+                  <div className="space-y-2.5">
+                    <p className="text-gray-700 flex items-center gap-2"><span className="text-blue-400 font-medium w-24">ชื่อผู้ติดต่อ:</span> <span className="font-semibold text-[#001D4A]">{selectedEvaluation.customer_name}</span></p>
+                    <p className="text-gray-700 flex items-center gap-2"><span className="text-blue-400 font-medium w-24">เบอร์โทร:</span> <span className="font-mono text-[#001D4A]">{selectedEvaluation.phone}</span></p>
+                    <p className="text-gray-700 flex items-center gap-2"><span className="text-blue-400 font-medium w-24">ชื่อโครงการ:</span> <span className="font-semibold text-[#001D4A]">{selectedEvaluation.project_name}</span></p>
+                    <div className="text-gray-700 flex items-start gap-2 mt-1">
+                      <span className="text-blue-400 font-medium w-24 shrink-0">ที่อยู่หน้างาน:</span>
+                      <span className="leading-relaxed font-medium bg-white px-3 py-1.5 rounded-lg border border-blue-50 shadow-sm">{selectedEvaluation.address} จ.{selectedEvaluation.province}</span>
+                    </div>
+                    <p className="text-gray-700 flex items-center gap-2 mt-1"><span className="text-blue-400 font-medium w-24">วันที่นัดหมาย:</span> <span className="font-semibold text-[#001D4A] bg-blue-100/50 px-2 py-1 rounded-md">{selectedEvaluation.booking_date ? new Date(selectedEvaluation.booking_date).toLocaleDateString('th-TH') : '---'}</span></p>
+                  </div>
+                </div>
+
+              </div>
+
+              {/* ฝั่งขวา: รายละเอียดบริการและอัปเดตสถานะ */}
+              <div className="w-full lg:w-[360px] shrink-0 space-y-6">
+                <div className="bg-gradient-to-br from-green-50 to-emerald-100/30 border border-green-100 p-6 rounded-2xl shadow-sm">
+                  <h4 className="text-xs text-green-600 font-bold uppercase tracking-wider mb-1">ประเภทบริการประเมิน</h4>
+                  <p className="text-xl font-black text-green-950 leading-snug">{selectedEvaluation.service_type}</p>
+                </div>
+
+                <div className="bg-white border border-gray-200 p-6 rounded-2xl shadow-sm space-y-4">
+                  <h4 className="text-sm font-semibold text-[#001D4A]">ปรับสถานะการตรวจสอบ</h4>
+                  <div>
+                    <select 
+                      value={selectedEvaluation.status || 'pending'} 
+                      onChange={(e) => handleUpdateEvaluationStatus(selectedEvaluation.id, e.target.value)}
+                      className={`w-full text-sm font-bold rounded-xl px-4 py-3.5 border outline-none cursor-pointer transition-colors shadow-sm
+                        ${selectedEvaluation.status === 'approved' ? 'bg-green-50 border-green-200 text-green-700' : 
+                          selectedEvaluation.status === 'rejected' ? 'bg-red-50 border-red-200 text-red-700' : 
+                          selectedEvaluation.status === 'user_cancelled' ? 'bg-gray-50 border-gray-200 text-gray-500' : 
+                          'bg-white border-gray-200 text-gray-700'}`}
+                    >
+                      <option value="pending">รอดำเนินการ</option>
+                      <option value="approved">ตรวจสอบแล้ว (อนุมัติ)</option>
+                      <option value="rejected">ไม่ผ่าน / ยกเลิก</option>
+                      <option value="user_cancelled" disabled={selectedEvaluation.status !== 'user_cancelled'}>ผู้ใช้ยกเลิกการจอง</option>
+                    </select>
+                  </div>
+                  <p className="text-xs text-gray-400 font-light">เมื่ออนุมัติ คิวตรวจประเมินของลูกค้าจะถือว่าได้รับการยืนยันเรียบร้อย</p>
+                </div>
+              </div>
+
+            </div>
+
           </div>
         </div>
       )}

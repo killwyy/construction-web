@@ -135,14 +135,14 @@ export default function ServiceInstall({ onViewDetail, setView }) {
 
                       <div className="mt-auto">
                         <div className="inline-block bg-blue-100 text-blue-600 px-3 py-1 rounded-md text-xs font-bold mb-4">
-                          {isFree ? 'ฟรีค่าสำรวจ' : `ค่าสำรวจ ฿${formatPrice(service.survey_fee)}`}
+                          {isFree ? 'ฟรีค่าสำรวจ' : `ค่าสำรวจ ${formatPrice(service.survey_fee)} บาท`}
                         </div>
 
                         <div className="flex flex-col">
                           <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">ราคาเริ่มต้น</span>
                           <div className="flex items-baseline gap-1 text-[#001D4A]">
                             <span className="text-3xl font-[900] tracking-tight text-[#001D4A]">
-                              ฿{formatPrice(service.price)}
+                              {formatPrice(service.price)} บาท
                             </span>
                             <span className="text-sm font-semibold text-gray-500">
                               / {service.unit}

@@ -232,11 +232,11 @@ export default function HouseBooking({ houseId, setView }) {
               <div className="space-y-5">
                 <div onClick={() => setSelectedSpec('standard')} className={`border-2 rounded-2xl p-6 cursor-pointer transition-all flex justify-between items-center relative ${selectedSpec === 'standard' ? 'border-red-500 bg-white shadow-lg' : 'border-gray-200 bg-white hover:border-gray-300'}`}>
                   <h3 className={`text-xl font-bold ${selectedSpec === 'standard' ? 'text-gray-900' : 'text-gray-600'}`}>Spec Standard</h3>
-                  <p className={`text-2xl font-black ${selectedSpec === 'standard' ? 'text-gray-900' : 'text-gray-600'}`}>฿{house.price?.toLocaleString()}</p>
+                  <p className={`text-2xl font-black ${selectedSpec === 'standard' ? 'text-gray-900' : 'text-gray-600'}`}>{house.price?.toLocaleString()} บาท</p>
                 </div>
                 <div onClick={() => setSelectedSpec('premium')} className={`border-2 rounded-2xl p-6 cursor-pointer transition-all flex justify-between items-center relative ${selectedSpec === 'premium' ? 'border-red-500 bg-white shadow-lg' : 'border-gray-200 bg-white hover:border-gray-300'}`}>
                   <h3 className={`text-xl font-bold ${selectedSpec === 'premium' ? 'text-gray-900' : 'text-gray-600'}`}>Spec Premium</h3>
-                  <p className={`text-2xl font-black ${selectedSpec === 'premium' ? 'text-gray-900' : 'text-gray-600'}`}>฿{house.price_premium?.toLocaleString()}</p>
+                  <p className={`text-2xl font-black ${selectedSpec === 'premium' ? 'text-gray-900' : 'text-gray-600'}`}>{house.price_premium?.toLocaleString()} บาท</p>
                 </div>
               </div>
             </div>
@@ -246,7 +246,7 @@ export default function HouseBooking({ houseId, setView }) {
               <div className="flex items-center gap-8 w-full sm:w-auto">
                 <div className="hidden md:block border-r pr-8">
                   <p className="text-red-600 font-bold text-sm mb-1">Spec {selectedSpec === 'standard' ? 'Standard' : 'Premium'} {house.title}</p>
-                  <p className="text-lg font-bold text-gray-400">฿{currentPrice?.toLocaleString()}</p>
+                  <p className="text-lg font-bold text-gray-400">{currentPrice?.toLocaleString()} บาท</p>
                 </div>
                 <div>
                   <p className="text-gray-500 text-sm font-semibold mb-1">ราคาจองสร้างบ้าน</p>
@@ -457,7 +457,7 @@ export default function HouseBooking({ houseId, setView }) {
               <div><p className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-1">รายละเอียดการจอง</p><h3 className="text-2xl font-bold text-[#001D4A]">{house.title}</h3></div>
               <div className="grid grid-cols-2 gap-4 border-t border-gray-200 pt-4">
                 <div><p className="text-sm text-gray-500 mb-1">สเปคที่เลือก</p><p className="font-bold text-gray-800 text-lg">Spec {selectedSpec === 'standard' ? 'Standard' : 'Premium'}</p></div>
-                <div><p className="text-sm text-gray-500 mb-1">ราคาก่อสร้าง</p><p className="font-bold text-gray-800 text-lg">฿{currentPrice?.toLocaleString()}</p></div>
+                <div><p className="text-sm text-gray-500 mb-1">ราคาก่อสร้าง</p><p className="font-bold text-gray-800 text-lg">{currentPrice?.toLocaleString()} บาท</p></div>
                 <div className="col-span-2 bg-white p-5 rounded-2xl border border-gray-200 mt-2 flex justify-between items-center shadow-sm">
                   <span className="font-bold text-gray-600 text-lg">ยอดชำระเงินจอง</span><span className="text-3xl font-black text-[#E60000]">฿50,000</span>
                 </div>

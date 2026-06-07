@@ -197,7 +197,7 @@ export default function ServiceContent({ onViewDetail, setView }) {
                       <div>
                         <p className="text-gray-400 text-xs font-bold uppercase">ราคาเริ่มต้น</p>
                         <p className="text-2xl font-black text-[#001D4A]">
-                          ฿{house.price?.toLocaleString() || "0"}
+                          {house.price?.toLocaleString() || "0"} บาท
                         </p>
                       </div>
                       

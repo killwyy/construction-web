@@ -61,7 +61,7 @@ export default function HouseDetail({ houseId, setView }) {
           
           <div className="mb-6">
             <p className="text-gray-300 text-sm font-semibold mb-1">ราคาเริ่มต้น</p>
-            <p className="text-4xl font-black text-white">฿{house.price?.toLocaleString()}</p>
+            <p className="text-4xl font-black text-white">{house.price?.toLocaleString()} บาท</p>
           </div>
 
           <div className="flex gap-8 border-t border-white/20 pt-6">
